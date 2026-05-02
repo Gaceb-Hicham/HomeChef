@@ -5,6 +5,11 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
+import { initializePayments } from '@/lib/payments';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+// Initialize i18n (side-effect import)
+import '@/i18n';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -31,6 +36,9 @@ export default function RootLayout() {
       setIsLoading(false);
     });
 
+    // Initialize payments
+    initializePayments();
+
     return () => subscription.unsubscribe();
   }, []);
 
@@ -45,10 +53,13 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="(customer)" options={{ headerShown: false }} />
-      <Stack.Screen name="(chef)" options={{ headerShown: false }} />
-    </Stack>
+    <ErrorBoundary>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(customer)" options={{ headerShown: false }} />
+        <Stack.Screen name="(chef)" options={{ headerShown: false }} />
+      </Stack>
+    </ErrorBoundary>
   );
 }
+

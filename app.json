@@ -27,7 +27,10 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.homechef.app",
-      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -36,7 +39,15 @@
     },
     "plugins": [
       "expo-router",
-      "expo-location"
+      "expo-location",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.homechef",
+          "enableGooglePay": true
+        }
+      ],
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true

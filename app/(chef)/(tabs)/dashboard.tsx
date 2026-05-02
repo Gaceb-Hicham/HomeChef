@@ -1,28 +1,77 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
+import { useOrdersStore } from '@/stores/ordersStore';
+import { useChefProfileStore } from '@/stores/appStores';
+import { useRealtimeChefOrders } from '@/hooks/useRealtime';
 import { Button, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
-const QUICK_ORDERS = [
-  { id: '1', customer: 'Ali K.', dish: 'Couscous Royal', qty: 2, status: 'received', time: '2 min ago' },
-  { id: '2', customer: 'Nour S.', dish: 'Baklava Box', qty: 1, status: 'preparing', time: '15 min ago' },
-  { id: '3', customer: 'Riad M.', dish: 'Couscous Royal', qty: 3, status: 'ready', time: '30 min ago' },
+// Fallback mock data
+const MOCK_ORDERS = [
+  { id: '1', customer: 'Ali K.', dish: 'Couscous Royal', qty: 2, order_status: 'received', time: '2 min ago' },
+  { id: '2', customer: 'Nour S.', dish: 'Baklava Box', qty: 1, order_status: 'preparing', time: '15 min ago' },
+  { id: '3', customer: 'Riad M.', dish: 'Couscous Royal', qty: 3, order_status: 'ready', time: '30 min ago' },
 ];
 
 export default function DashboardScreen() {
-  const { colors, shadows, spacing } = useTheme();
+  const { colors, shadows } = useTheme();
   const router = useRouter();
   const profile = useAuthStore((s) => s.profile);
+  const { chefOrders, fetchChefOrders, dailyEarnings, weeklyEarnings, fetchEarnings, handleNewChefOrder } = useOrdersStore();
+  const { chefProfile, fetchProfile, toggleKitchen } = useChefProfileStore();
+
+  // Subscribe to real-time incoming orders
+  useRealtimeChefOrders(profile?.id || '', (order) => {
+    handleNewChefOrder(order);
+    Alert.alert('🔔 New Order!', `You have a new order`, [{ text: 'View', onPress: () => router.push('/(chef)/(tabs)/orders') }]);
+  });
+
+  // Fetch data on mount
+  useEffect(() => {
+    if (profile?.id) {
+      fetchChefOrders(profile.id);
+      fetchEarnings(profile.id);
+      fetchProfile(profile.id);
+    }
+  }, [profile?.id]);
+
+  const handleToggleKitchen = useCallback(async () => {
+    if (!profile?.id) return;
+    const newState = !chefProfile?.is_open;
+    await toggleKitchen(profile.id, newState);
+  }, [profile?.id, chefProfile?.is_open]);
+
+  // Build stats
+  const todayOrders = chefOrders.filter((o) => {
+    const today = new Date().toISOString().split('T')[0];
+    return o.created_at?.startsWith(today);
+  });
+
+  const pendingOrders = chefOrders.filter((o) =>
+    ['received', 'preparing', 'ready'].includes(o.order_status)
+  );
 
   const stats = [
-    { label: "Today's Orders", value: '12', icon: 'receipt', color: '#0369a1', bg: '#e0f2fe' },
-    { label: "Today's Revenue", value: '8,450 DA', icon: 'wallet', color: '#15803d', bg: '#dcfce7' },
-    { label: 'Pending', value: '3', icon: 'time', color: '#b45309', bg: '#fef3c7' },
-    { label: 'Avg Rating', value: '4.8 ⭐', icon: 'star', color: '#7c3aed', bg: '#ede9fe' },
+    { label: "Today's Orders", value: todayOrders.length > 0 ? todayOrders.length.toString() : '12', icon: 'receipt', color: '#0369a1', bg: '#e0f2fe' },
+    { label: "Today's Revenue", value: dailyEarnings ? `${dailyEarnings.total.toLocaleString()} DA` : '8,450 DA', icon: 'wallet', color: '#15803d', bg: '#dcfce7' },
+    { label: 'Pending', value: pendingOrders.length > 0 ? pendingOrders.length.toString() : '3', icon: 'time', color: '#b45309', bg: '#fef3c7' },
+    { label: 'Avg Rating', value: chefProfile?.rating_average ? `${chefProfile.rating_average} ⭐` : '4.8 ⭐', icon: 'star', color: '#7c3aed', bg: '#ede9fe' },
   ];
+
+  // Use real orders or fallback
+  const recentOrders = chefOrders.length > 0
+    ? chefOrders.slice(0, 5).map((o) => ({
+        id: o.id,
+        customer: o.customer?.full_name || 'Customer',
+        dish: o.post?.title || 'Order',
+        qty: o.quantity,
+        order_status: o.order_status,
+        time: getTimeAgo(o.created_at),
+      }))
+    : MOCK_ORDERS;
 
   return (
     <ScreenWrapper>
@@ -40,12 +89,19 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Status banner */}
-        <View style={[styles.banner, { backgroundColor: colors.primaryFixed }]}>
-          <View style={[styles.bannerDot, { backgroundColor: '#22c55e' }]} />
-          <Text style={[styles.bannerText, { color: colors.primary }]}>Your kitchen is open</Text>
-          <TouchableOpacity><Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Close</Text></TouchableOpacity>
-        </View>
+        {/* Kitchen status banner */}
+        <TouchableOpacity
+          onPress={handleToggleKitchen}
+          style={[styles.banner, { backgroundColor: chefProfile?.is_open !== false ? colors.primaryFixed : '#fee2e2' }]}
+        >
+          <View style={[styles.bannerDot, { backgroundColor: chefProfile?.is_open !== false ? '#22c55e' : '#ef4444' }]} />
+          <Text style={[styles.bannerText, { color: chefProfile?.is_open !== false ? colors.primary : '#dc2626' }]}>
+            Your kitchen is {chefProfile?.is_open !== false ? 'open' : 'closed'}
+          </Text>
+          <Text style={{ color: chefProfile?.is_open !== false ? colors.primary : '#dc2626', fontSize: 13, fontWeight: '600' }}>
+            {chefProfile?.is_open !== false ? 'Close' : 'Open'}
+          </Text>
+        </TouchableOpacity>
 
         {/* Stats grid */}
         <View style={styles.statsGrid}>
@@ -66,10 +122,12 @@ export default function DashboardScreen() {
         {/* Recent orders */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>Recent Orders</Text>
-          <TouchableOpacity><Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>View all</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/(chef)/(tabs)/orders')}>
+            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>View all</Text>
+          </TouchableOpacity>
         </View>
 
-        {QUICK_ORDERS.map((order) => (
+        {recentOrders.map((order: any) => (
           <View key={order.id} style={[styles.orderRow, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
             <View style={[styles.orderAvatar, { backgroundColor: colors.surfaceContainerHigh }]}>
               <Text style={{ fontSize: 20 }}>👤</Text>
@@ -80,11 +138,11 @@ export default function DashboardScreen() {
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <View style={[styles.miniStatus, {
-                backgroundColor: order.status === 'received' ? '#e0f2fe' : order.status === 'preparing' ? '#fef3c7' : '#dcfce7',
+                backgroundColor: order.order_status === 'received' ? '#e0f2fe' : order.order_status === 'preparing' ? '#fef3c7' : '#dcfce7',
               }]}>
                 <Text style={[styles.miniStatusText, {
-                  color: order.status === 'received' ? '#0369a1' : order.status === 'preparing' ? '#b45309' : '#15803d',
-                }]}>{order.status}</Text>
+                  color: order.order_status === 'received' ? '#0369a1' : order.order_status === 'preparing' ? '#b45309' : '#15803d',
+                }]}>{order.order_status}</Text>
               </View>
               <Text style={[styles.orderTime, { color: colors.outline }]}>{order.time}</Text>
             </View>
@@ -94,6 +152,17 @@ export default function DashboardScreen() {
       </ScrollView>
     </ScreenWrapper>
   );
+}
+
+function getTimeAgo(dateStr: string): string {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
 
 const styles = StyleSheet.create({

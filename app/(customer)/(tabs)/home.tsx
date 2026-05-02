@@ -1,20 +1,22 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, FlatList,
-  TouchableOpacity, RefreshControl, Dimensions, Image,
+  TouchableOpacity, RefreshControl, Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
+import { usePostsStore } from '@/stores/postsStore';
+import { useNotificationsStore } from '@/stores/appStores';
+import { useRealtimeFeed } from '@/hooks/useRealtime';
 import { ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = width - 48;
 
 const CATEGORIES = ['All', '🍲 Meals', '🍰 Desserts', '🥗 Salads', '🍞 Bakery', '🥤 Drinks'];
 
-// Mock data for demo
+// Fallback mock data when Supabase isn't configured
 const MOCK_CHEFS = [
   { id: '1', name: 'Sarah K.', avatar: '👩‍🍳', hasStory: true },
   { id: '2', name: 'Ahmed M.', avatar: '👨‍🍳', hasStory: true },
@@ -23,28 +25,57 @@ const MOCK_CHEFS = [
 ];
 
 const MOCK_POSTS = [
-  { id: '1', title: 'Couscous Royal', chef: 'Sarah K.', chefAvatar: '👩‍🍳', price: 850, remaining: 5, deadline: '14:00', emoji: '🍲', category: 'Meals' },
-  { id: '2', title: 'Baklava Box', chef: 'Ahmed M.', chefAvatar: '👨‍🍳', price: 450, remaining: 12, deadline: '16:00', emoji: '🍰', category: 'Desserts' },
-  { id: '3', title: 'Fresh Baguettes', chef: 'Fatima Z.', chefAvatar: '👩‍🍳', price: 150, remaining: 20, deadline: '11:00', emoji: '🍞', category: 'Bakery' },
-  { id: '4', title: 'Grilled Chicken Plate', chef: 'Karim B.', chefAvatar: '👨‍🍳', price: 750, remaining: 3, deadline: '13:30', emoji: '🍗', category: 'Meals' },
-  { id: '5', title: 'Mille-feuille', chef: 'Sarah K.', chefAvatar: '👩‍🍳', price: 350, remaining: 8, deadline: '15:00', emoji: '🧁', category: 'Desserts' },
+  { id: '1', title: 'Couscous Royal', chef_name: 'Sarah K.', chefAvatar: '👩‍🍳', price: 850, remaining_quantity: 5, order_deadline: '14:00', emoji: '🍲', category: 'Meals' },
+  { id: '2', title: 'Baklava Box', chef_name: 'Ahmed M.', chefAvatar: '👨‍🍳', price: 450, remaining_quantity: 12, order_deadline: '16:00', emoji: '🍰', category: 'Desserts' },
+  { id: '3', title: 'Fresh Baguettes', chef_name: 'Fatima Z.', chefAvatar: '👩‍🍳', price: 150, remaining_quantity: 20, order_deadline: '11:00', emoji: '🍞', category: 'Bakery' },
+  { id: '4', title: 'Grilled Chicken Plate', chef_name: 'Karim B.', chefAvatar: '👨‍🍳', price: 750, remaining_quantity: 3, order_deadline: '13:30', emoji: '🍗', category: 'Meals' },
+  { id: '5', title: 'Mille-feuille', chef_name: 'Sarah K.', chefAvatar: '👩‍🍳', price: 350, remaining_quantity: 8, order_deadline: '15:00', emoji: '🧁', category: 'Desserts' },
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { colors, shadows, rounded, spacing } = useTheme();
+  const { colors, shadows, spacing } = useTheme();
   const profile = useAuthStore((s) => s.profile);
+  const { feed, isLoading, isRefreshing, fetchFeed, refreshFeed, handleRealtimeUpdate } = usePostsStore();
+  const unreadCount = useNotificationsStore((s) => s.unreadCount);
+
   const [activeCategory, setActiveCategory] = useState('All');
-  const [refreshing, setRefreshing] = useState(false);
+
+  // Subscribe to realtime feed updates
+  useRealtimeFeed(handleRealtimeUpdate);
+
+  // Fetch feed on mount
+  useEffect(() => {
+    fetchFeed(profile?.city || undefined);
+  }, [profile?.city]);
+
+  // Fetch unread notification count
+  useEffect(() => {
+    if (profile?.id) {
+      useNotificationsStore.getState().fetchUnreadCount(profile.id);
+    }
+  }, [profile?.id]);
 
   const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1500);
-  }, []);
+    refreshFeed(profile?.city || undefined);
+  }, [profile?.city]);
+
+  // Use real data if available, otherwise mock
+  const posts = feed.length > 0 ? feed : MOCK_POSTS;
 
   const filteredPosts = activeCategory === 'All'
-    ? MOCK_POSTS
-    : MOCK_POSTS.filter((p) => activeCategory.includes(p.category));
+    ? posts
+    : posts.filter((p: any) => {
+        const cat = activeCategory.split(' ').pop();
+        return p.category === cat || p.title?.toLowerCase().includes(cat?.toLowerCase() || '');
+      });
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
 
   const renderStory = ({ item }: { item: typeof MOCK_CHEFS[0] }) => (
     <TouchableOpacity style={styles.storyItem}>
@@ -59,60 +90,69 @@ export default function HomeScreen() {
     </TouchableOpacity>
   );
 
-  const renderPostCard = ({ item }: { item: typeof MOCK_POSTS[0] }) => (
-    <TouchableOpacity
-      activeOpacity={0.85}
-      onPress={() => router.push(`/(customer)/offer/${item.id}`)}
-      style={[styles.postCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.md }]}
-    >
-      {/* Image placeholder */}
-      <View style={[styles.postImage, { backgroundColor: colors.surfaceContainerHigh }]}>
-        <Text style={{ fontSize: 56 }}>{item.emoji}</Text>
-        {/* Remaining badge */}
-        <View style={[styles.remainingBadge, { backgroundColor: colors.tertiaryContainer }]}>
-          <Text style={[styles.remainingText, { color: colors.onTertiaryContainer }]}>
-            {item.remaining} left
-          </Text>
-        </View>
-      </View>
+  const renderPostCard = ({ item }: { item: any }) => {
+    const chefName = item.chef?.full_name || item.chef_name || 'Chef';
+    const remaining = item.remaining_quantity;
+    const deadline = typeof item.order_deadline === 'string' && item.order_deadline.includes('T')
+      ? new Date(item.order_deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : item.order_deadline;
 
-      <View style={styles.postContent}>
-        {/* Chef row */}
-        <View style={styles.chefRow}>
-          <View style={[styles.chefMiniAvatar, { backgroundColor: colors.surfaceContainerHigh }]}>
-            <Text style={{ fontSize: 14 }}>{item.chefAvatar}</Text>
+    return (
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => router.push(`/(customer)/offer/${item.id}`)}
+        style={[styles.postCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.md }]}
+      >
+        <View style={[styles.postImage, { backgroundColor: colors.surfaceContainerHigh }]}>
+          {item.photos && item.photos.length > 0 ? (
+            <Text style={{ fontSize: 56 }}>🍽️</Text>
+          ) : (
+            <Text style={{ fontSize: 56 }}>{item.emoji || '🍽️'}</Text>
+          )}
+          <View style={[styles.remainingBadge, { backgroundColor: colors.tertiaryContainer }]}>
+            <Text style={[styles.remainingText, { color: colors.onTertiaryContainer }]}>
+              {remaining} left
+            </Text>
           </View>
-          <Text style={[styles.chefName, { color: colors.onSurfaceVariant }]}>{item.chef}</Text>
-          <View style={{ flex: 1 }} />
-          <Ionicons name="time-outline" size={14} color={colors.outline} />
-          <Text style={[styles.deadline, { color: colors.outline }]}> {item.deadline}</Text>
         </View>
 
-        <Text style={[styles.postTitle, { color: colors.onSurface }]}>{item.title}</Text>
+        <View style={styles.postContent}>
+          <View style={styles.chefRow}>
+            <View style={[styles.chefMiniAvatar, { backgroundColor: colors.surfaceContainerHigh }]}>
+              <Text style={{ fontSize: 14 }}>{item.chefAvatar || '👨‍🍳'}</Text>
+            </View>
+            <Text style={[styles.chefName, { color: colors.onSurfaceVariant }]}>{chefName}</Text>
+            <View style={{ flex: 1 }} />
+            <Ionicons name="time-outline" size={14} color={colors.outline} />
+            <Text style={[styles.deadline, { color: colors.outline }]}> {deadline}</Text>
+          </View>
 
-        <View style={styles.postFooter}>
-          <Text style={[styles.price, { color: colors.primary }]}>
-            {item.price} <Text style={styles.currency}>DA</Text>
-          </Text>
-          <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.primary }]}>
-            <Ionicons name="add" size={20} color={colors.onPrimary} />
-          </TouchableOpacity>
+          <Text style={[styles.postTitle, { color: colors.onSurface }]}>{item.title}</Text>
+
+          <View style={styles.postFooter}>
+            <Text style={[styles.price, { color: colors.primary }]}>
+              {item.price} <Text style={styles.currency}>DA</Text>
+            </Text>
+            <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.primary }]}>
+              <Ionicons name="add" size={20} color={colors.onPrimary} />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <ScreenWrapper padded={false}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
         {/* Header */}
         <View style={[styles.header, { paddingHorizontal: spacing.xl }]}>
           <View>
             <Text style={[styles.greeting, { color: colors.onSurfaceVariant }]}>
-              Good afternoon 👋
+              {getGreeting()} 👋
             </Text>
             <Text style={[styles.userName, { color: colors.onBackground }]}>
               {profile?.full_name || 'Foodie'}
@@ -124,7 +164,7 @@ export default function HomeScreen() {
               onPress={() => router.push('/(customer)/notifications')}
             >
               <Ionicons name="notifications-outline" size={22} color={colors.onSurface} />
-              <View style={[styles.notifDot, { backgroundColor: colors.error }]} />
+              {unreadCount > 0 && <View style={[styles.notifDot, { backgroundColor: colors.error }]} />}
             </TouchableOpacity>
             <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.surfaceContainerLow }]}
               onPress={() => router.push('/(customer)/saved')}>
@@ -163,7 +203,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Posts */}
-        <FlatList data={filteredPosts} renderItem={renderPostCard} keyExtractor={(i) => i.id}
+        <FlatList data={filteredPosts} renderItem={renderPostCard} keyExtractor={(i: any) => i.id}
           scrollEnabled={false}
           contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: 16, paddingBottom: 24 }} />
       </ScrollView>

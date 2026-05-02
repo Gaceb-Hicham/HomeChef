@@ -1,102 +1,150 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuthStore } from '@/stores/authStore';
+import { useOrdersStore } from '@/stores/ordersStore';
 import { ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
-const MOCK_ORDERS = [
-  { id: '1', title: 'Couscous Royal', chef: 'Sarah K.', status: 'preparing', price: 850, date: 'Today', emoji: '🍲' },
-  { id: '2', title: 'Baklava Box', chef: 'Ahmed M.', status: 'delivered', price: 450, date: 'Yesterday', emoji: '🍰' },
-  { id: '3', title: 'Grilled Chicken', chef: 'Karim B.', status: 'delivered', price: 750, date: '28 Apr', emoji: '🍗', reviewed: true },
-];
-
-const statusConfig: Record<string, { color: string; bg: string; label: string }> = {
-  received: { color: '#0369a1', bg: '#e0f2fe', label: 'Received' },
-  preparing: { color: '#b45309', bg: '#fef3c7', label: 'Preparing' },
-  ready: { color: '#7c3aed', bg: '#ede9fe', label: 'Ready' },
-  out_for_delivery: { color: '#0284c7', bg: '#e0f2fe', label: 'On the way' },
-  delivered: { color: '#15803d', bg: '#dcfce7', label: 'Delivered' },
-  cancelled: { color: '#dc2626', bg: '#fee2e2', label: 'Cancelled' },
+const STATUS_COLORS: Record<string, { bg: string; text: string; icon: string }> = {
+  received: { bg: '#e0f2fe', text: '#0369a1', icon: 'receipt' },
+  preparing: { bg: '#fef3c7', text: '#b45309', icon: 'flame' },
+  ready: { bg: '#dcfce7', text: '#15803d', icon: 'checkmark-circle' },
+  out_for_delivery: { bg: '#ede9fe', text: '#7c3aed', icon: 'bicycle' },
+  delivered: { bg: '#d1fae5', text: '#065f46', icon: 'checkmark-done' },
+  cancelled: { bg: '#fee2e2', text: '#dc2626', icon: 'close-circle' },
 };
 
+const MOCK_ORDERS = [
+  { id: '1', post: { title: 'Couscous Royal', photos: [], price: 850 }, chef: { full_name: 'Sarah K.', profile_photo_url: null }, quantity: 2, total_price: 1700, order_status: 'preparing', delivery_type: 'delivery', created_at: new Date(Date.now() - 1800000).toISOString() },
+  { id: '2', post: { title: 'Baklava Box', photos: [], price: 450 }, chef: { full_name: 'Ahmed M.', profile_photo_url: null }, quantity: 1, total_price: 450, order_status: 'delivered', delivery_type: 'pickup', created_at: new Date(Date.now() - 86400000).toISOString() },
+  { id: '3', post: { title: 'Fresh Baguettes', photos: [], price: 150 }, chef: { full_name: 'Fatima Z.', profile_photo_url: null }, quantity: 3, total_price: 450, order_status: 'delivered', delivery_type: 'delivery', created_at: new Date(Date.now() - 172800000).toISOString() },
+];
+
 export default function OrdersScreen() {
-  const { colors, shadows } = useTheme();
   const router = useRouter();
+  const { colors, shadows } = useTheme();
+  const profile = useAuthStore((s) => s.profile);
+  const { activeOrders, pastOrders, fetchCustomerOrders, isLoading } = useOrdersStore();
   const [tab, setTab] = useState<'active' | 'past'>('active');
 
-  const activeOrders = MOCK_ORDERS.filter((o) => !['delivered', 'cancelled'].includes(o.status));
-  const pastOrders = MOCK_ORDERS.filter((o) => ['delivered', 'cancelled'].includes(o.status));
-  const data = tab === 'active' ? activeOrders : pastOrders;
+  useEffect(() => {
+    if (profile?.id) fetchCustomerOrders(profile.id);
+  }, [profile?.id]);
+
+  // Use real or mock data
+  const active = activeOrders.length > 0 ? activeOrders : MOCK_ORDERS.filter((o) => !['delivered', 'cancelled'].includes(o.order_status));
+  const past = pastOrders.length > 0 ? pastOrders : MOCK_ORDERS.filter((o) => ['delivered', 'cancelled'].includes(o.order_status));
+  const data = tab === 'active' ? active : past;
+
+  const getTimeLabel = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - d.getTime();
+    const days = Math.floor(diff / 86400000);
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  const renderOrder = ({ item }: { item: any }) => {
+    const sc = STATUS_COLORS[item.order_status] || STATUS_COLORS.received;
+
+    return (
+      <TouchableOpacity
+        onPress={() => {
+          if (['received', 'preparing', 'ready', 'out_for_delivery'].includes(item.order_status)) {
+            router.push(`/(customer)/track/${item.id}`);
+          }
+        }}
+        style={[styles.card, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
+        <View style={styles.cardRow}>
+          <View style={[styles.cardImg, { backgroundColor: colors.surfaceContainerHigh }]}>
+            <Text style={{ fontSize: 28 }}>🍽️</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.cardTitle, { color: colors.onSurface }]}>{item.post?.title} × {item.quantity}</Text>
+            <Text style={[styles.cardChef, { color: colors.onSurfaceVariant }]}>by {item.chef?.full_name}</Text>
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={[styles.cardPrice, { color: colors.primary }]}>{item.total_price} DA</Text>
+            <Text style={[styles.cardDate, { color: colors.outline }]}>{getTimeLabel(item.created_at)}</Text>
+          </View>
+        </View>
+
+        <View style={styles.cardFooter}>
+          <View style={[styles.statusBadge, { backgroundColor: sc.bg }]}>
+            <Ionicons name={sc.icon as any} size={14} color={sc.text} />
+            <Text style={[styles.statusText, { color: sc.text }]}>{item.order_status.replace(/_/g, ' ')}</Text>
+          </View>
+          <View style={[styles.deliveryBadge, { backgroundColor: colors.surfaceContainerLow }]}>
+            <Ionicons name={item.delivery_type === 'delivery' ? 'bicycle' : 'storefront'} size={12} color={colors.onSurfaceVariant} />
+            <Text style={{ color: colors.onSurfaceVariant, fontSize: 11, textTransform: 'capitalize' }}>{item.delivery_type}</Text>
+          </View>
+          {tab === 'active' && (
+            <Ionicons name="chevron-forward" size={18} color={colors.outline} style={{ marginLeft: 'auto' }} />
+          )}
+          {tab === 'past' && !item.review && item.order_status === 'delivered' && (
+            <TouchableOpacity
+              onPress={() => router.push(`/(customer)/review/${item.id}`)}
+              style={[styles.reviewBtn, { borderColor: colors.primary }]}>
+              <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>Leave Review</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <ScreenWrapper>
-      <Text style={[styles.title, { color: colors.onBackground }]}>My Orders</Text>
-      {/* Tab switcher */}
-      <View style={[styles.tabs, { backgroundColor: colors.surfaceContainerLow }]}>
+    <ScreenWrapper padded={false}>
+      <View style={{ paddingHorizontal: 20, paddingTop: 8, marginBottom: 12 }}>
+        <Text style={[styles.title, { color: colors.onBackground }]}>My Orders</Text>
+      </View>
+
+      {/* Tabs */}
+      <View style={[styles.tabs, { paddingHorizontal: 20, marginBottom: 16 }]}>
         {(['active', 'past'] as const).map((t) => (
           <TouchableOpacity key={t} onPress={() => setTab(t)}
-            style={[styles.tab, tab === t && { backgroundColor: colors.surfaceContainerLowest }]}>
-            <Text style={[styles.tabText, { color: tab === t ? colors.primary : colors.outline }]}>
-              {t === 'active' ? 'Active' : 'Past'}
+            style={[styles.tab, { borderBottomColor: tab === t ? colors.primary : 'transparent' }]}>
+            <Text style={[styles.tabText, { color: tab === t ? colors.primary : colors.onSurfaceVariant }]}>
+              {t === 'active' ? `Active (${active.length})` : `Past (${past.length})`}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <FlatList data={data} keyExtractor={(i) => i.id} showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: 8 }}
-        ListEmptyComponent={() => (
-          <View style={styles.empty}>
-            <Text style={{ fontSize: 48 }}>📋</Text>
-            <Text style={[styles.emptyText, { color: colors.onSurfaceVariant }]}>No {tab} orders</Text>
+      <FlatList data={data} renderItem={renderOrder} keyExtractor={(i: any) => i.id}
+        contentContainerStyle={{ paddingHorizontal: 20, gap: 12, paddingBottom: 24 }}
+        ListEmptyComponent={
+          <View style={{ alignItems: 'center', paddingTop: 40 }}>
+            <Text style={{ fontSize: 40 }}>📋</Text>
+            <Text style={{ color: colors.onSurfaceVariant, marginTop: 8, fontSize: 15 }}>
+              {tab === 'active' ? 'No active orders' : 'No past orders yet'}
+            </Text>
           </View>
-        )}
-        renderItem={({ item }) => {
-          const sc = statusConfig[item.status];
-          return (
-            <TouchableOpacity style={[styles.card, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}
-              onPress={() => router.push(`/(customer)/track/${item.id}`)}>
-              <View style={[styles.cardImg, { backgroundColor: colors.surfaceContainerHigh }]}>
-                <Text style={{ fontSize: 32 }}>{item.emoji}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.cardTitle, { color: colors.onSurface }]}>{item.title}</Text>
-                <Text style={[styles.cardChef, { color: colors.onSurfaceVariant }]}>{item.chef} · {item.date}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: sc.bg }]}>
-                  <Text style={[styles.statusText, { color: sc.color }]}>{sc.label}</Text>
-                </View>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={[styles.cardPrice, { color: colors.primary }]}>{item.price} DA</Text>
-                {item.status === 'delivered' && !(item as any).reviewed && (
-                  <TouchableOpacity onPress={() => router.push(`/(customer)/review/${item.id}`)}
-                    style={[styles.reviewBtn, { borderColor: colors.primary }]}>
-                    <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '600' }}>Review</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </TouchableOpacity>
-          );
-        }}
+        }
       />
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontFamily: 'NotoSerif-Bold', fontSize: 28, fontWeight: '700', marginTop: 8, marginBottom: 16 },
-  tabs: { flexDirection: 'row', borderRadius: 12, padding: 4, marginBottom: 12 },
-  tab: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
-  tabText: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 14, fontWeight: '600' },
-  empty: { alignItems: 'center', paddingTop: 80 },
-  emptyText: { fontFamily: 'PlusJakartaSans-Regular', fontSize: 15, marginTop: 12 },
-  card: { flexDirection: 'row', padding: 14, borderRadius: 16, marginBottom: 10, gap: 12, alignItems: 'center' },
-  cardImg: { width: 56, height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  title: { fontFamily: 'NotoSerif-Bold', fontSize: 24, fontWeight: '700' },
+  tabs: { flexDirection: 'row', gap: 20 },
+  tab: { paddingBottom: 8, borderBottomWidth: 2.5 },
+  tabText: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 15, fontWeight: '600' },
+  card: { borderRadius: 16, padding: 16 },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  cardImg: { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   cardTitle: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 15, fontWeight: '600' },
   cardChef: { fontFamily: 'PlusJakartaSans-Regular', fontSize: 12, marginTop: 2 },
-  statusBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginTop: 6 },
-  statusText: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 11, fontWeight: '600' },
-  cardPrice: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 15, fontWeight: '700' },
-  reviewBtn: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, marginTop: 8 },
+  cardPrice: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, fontWeight: '700' },
+  cardDate: { fontFamily: 'PlusJakartaSans-Regular', fontSize: 11, marginTop: 2 },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  statusText: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 11, fontWeight: '600', textTransform: 'capitalize' },
+  deliveryBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  reviewBtn: { marginLeft: 'auto', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
 });

@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useCartStore } from '@/stores/cartStore';
+import { useOrdersStore } from '@/stores/ordersStore';
+import { useAuthStore } from '@/stores/authStore';
 import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -11,28 +13,67 @@ const TIME_SLOTS = ['12:00 - 12:30', '12:30 - 13:00', '13:00 - 13:30', '13:30 - 
 export default function CheckoutScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
-  const { items, getSubtotal, getTotal, clearCart } = useCartStore();
+  const { items, getSubtotal, getTotal, clearCart, getItemsByChef } = useCartStore();
+  const { placeOrder, isLoading: orderLoading } = useOrdersStore();
+  const profile = useAuthStore((s) => s.profile);
+
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
   const [selectedSlot, setSelectedSlot] = useState(TIME_SLOTS[0]);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('card');
   const [note, setNote] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handlePlaceOrder = () => {
+  const deliveryFee = deliveryType === 'delivery' ? 100 : 0;
+
+  const handlePlaceOrder = async () => {
+    if (!profile?.id) {
+      Alert.alert('Error', 'Please log in to place an order');
+      return;
+    }
+
     setIsLoading(true);
-    setTimeout(() => {
+
+    // Group items by chef and create separate orders
+    const itemsByChef = getItemsByChef();
+    const orderPromises = Object.entries(itemsByChef).map(async ([chefId, chefItems]) => {
+      for (const item of chefItems) {
+        const order = {
+          customer_id: profile.id,
+          chef_id: chefId,
+          post_id: item.postId,
+          quantity: item.quantity,
+          unit_price: item.price,
+          total_price: item.price * item.quantity,
+          customer_note: note || null,
+          delivery_type: deliveryType,
+          delivery_address: deliveryType === 'delivery' ? '123 Rue Didouche Mourad, Algiers' : null,
+          payment_method: paymentMethod,
+          payment_status: paymentMethod === 'cash' ? 'pending' : 'paid',
+          order_status: 'received',
+          scheduled_time: null,
+        };
+
+        const { error } = await placeOrder(order);
+        if (error) throw new Error(error);
+      }
+    });
+
+    try {
+      await Promise.all(orderPromises);
       setIsLoading(false);
       clearCart();
       Alert.alert('🎉 Order Placed!', 'Your order has been confirmed. Track it in My Orders.', [
         { text: 'View Orders', onPress: () => router.replace('/(customer)/(tabs)/orders') },
       ]);
-    }, 2000);
+    } catch (e: any) {
+      setIsLoading(false);
+      Alert.alert('Order Failed', e.message || 'Something went wrong. Please try again.');
+    }
   };
 
   return (
     <ScreenWrapper>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={colors.onSurface} />
@@ -63,7 +104,9 @@ export default function CheckoutScreen() {
               <Ionicons name="location" size={22} color={colors.primary} />
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={[styles.addressLabel, { color: colors.onSurface }]}>Home</Text>
-                <Text style={[styles.addressText, { color: colors.onSurfaceVariant }]}>123 Rue Didouche Mourad, Algiers</Text>
+                <Text style={[styles.addressText, { color: colors.onSurfaceVariant }]}>
+                  {profile?.city ? `${profile.area || ''}, ${profile.city}` : '123 Rue Didouche Mourad, Algiers'}
+                </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.outline} />
             </TouchableOpacity>
@@ -110,22 +153,21 @@ export default function CheckoutScreen() {
               <Text style={[styles.sumPrice, { color: colors.onSurface }]}>{i.price * i.quantity} DA</Text>
             </View>
           ))}
-          {deliveryType === 'delivery' && (
+          {deliveryFee > 0 && (
             <View style={styles.sumRow}>
               <Text style={[styles.sumItem, { color: colors.onSurfaceVariant }]}>Delivery fee</Text>
-              <Text style={[styles.sumPrice, { color: colors.onSurface }]}>100 DA</Text>
+              <Text style={[styles.sumPrice, { color: colors.onSurface }]}>{deliveryFee} DA</Text>
             </View>
           )}
           <View style={[styles.sumRow, { borderTopWidth: 1, borderTopColor: colors.outlineVariant, paddingTop: 10, marginTop: 6 }]}>
             <Text style={[styles.totalLabel, { color: colors.onBackground }]}>Total</Text>
-            <Text style={[styles.totalValue, { color: colors.primary }]}>{getTotal() + (deliveryType === 'delivery' ? 100 : 0)} DA</Text>
+            <Text style={[styles.totalValue, { color: colors.primary }]}>{getTotal() + deliveryFee} DA</Text>
           </View>
         </View>
       </ScrollView>
 
-      {/* Bottom CTA */}
       <View style={{ paddingVertical: 16 }}>
-        <Button title="Place Order" onPress={handlePlaceOrder} loading={isLoading} size="lg" />
+        <Button title="Place Order" onPress={handlePlaceOrder} loading={isLoading || orderLoading} size="lg" />
       </View>
     </ScreenWrapper>
   );

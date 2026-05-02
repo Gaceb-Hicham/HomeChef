@@ -1,13 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuthStore } from '@/stores/authStore';
+import { usePostsStore } from '@/stores/postsStore';
+import { pickImage, uploadPostPhotos } from '@/lib/storage';
 import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function CreatePostScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
+  const profile = useAuthStore((s) => s.profile);
+  const { createPost, isLoading: storeLoading } = usePostsStore();
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -17,19 +23,85 @@ export default function CreatePostScreen() {
   const [pickup, setPickup] = useState(true);
   const [preorder, setPreorder] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedPhotos, setSelectedPhotos] = useState<{ uri: string; base64: string }[]>([]);
 
-  const handlePublish = () => {
+  const handlePickPhotos = async () => {
+    try {
+      const { assets, canceled } = await pickImage({ allowsMultipleSelection: true, aspect: [4, 3], quality: 0.7 });
+      if (!canceled && assets) {
+        const newPhotos = assets.slice(0, 5 - selectedPhotos.length).map((a: any) => ({
+          uri: a.uri,
+          base64: a.base64 || '',
+        }));
+        setSelectedPhotos([...selectedPhotos, ...newPhotos]);
+      }
+    } catch (e) {
+      // Fallback for web — photos are optional
+      Alert.alert('Info', 'Photo upload requires a native device. You can still publish without photos.');
+    }
+  };
+
+  const removePhoto = (idx: number) => {
+    setSelectedPhotos(selectedPhotos.filter((_, i) => i !== idx));
+  };
+
+  const handlePublish = async () => {
     if (!title.trim() || !price || !quantity) {
       Alert.alert('Missing Fields', 'Please fill in title, price, and quantity.');
       return;
     }
+
+    if (!profile?.id) {
+      Alert.alert('Error', 'Please log in first');
+      return;
+    }
+
     setIsLoading(true);
-    setTimeout(() => {
+
+    try {
+      // Upload photos if any
+      let photoUrls: string[] = [];
+      if (selectedPhotos.length > 0) {
+        const { urls } = await uploadPostPhotos(
+          profile.id,
+          selectedPhotos.map((p) => ({ base64: p.base64 }))
+        );
+        photoUrls = urls;
+      }
+
+      // Create deadline timestamp (today + time)
+      const today = new Date().toISOString().split('T')[0];
+      const deadlineTime = `${today}T${deadline}:00.000Z`;
+
+      const { error } = await createPost({
+        chef_id: profile.id,
+        title: title.trim(),
+        description: description.trim() || null,
+        photos: photoUrls,
+        price: parseInt(price),
+        available_quantity: parseInt(quantity),
+        remaining_quantity: parseInt(quantity),
+        order_deadline: deadlineTime,
+        delivery_available: delivery,
+        pickup_available: pickup,
+        preorder_allowed: preorder,
+        is_active: true,
+        date: today,
+      });
+
       setIsLoading(false);
-      Alert.alert('Published! 🎉', 'Your daily special is now live. All followers have been notified.', [
-        { text: 'Done', onPress: () => router.back() },
-      ]);
-    }, 2000);
+
+      if (error) {
+        Alert.alert('Error', error);
+      } else {
+        Alert.alert('Published! 🎉', 'Your daily special is now live. All followers have been notified.', [
+          { text: 'Done', onPress: () => router.back() },
+        ]);
+      }
+    } catch (e: any) {
+      setIsLoading(false);
+      Alert.alert('Error', e.message || 'Failed to publish');
+    }
   };
 
   return (
@@ -44,11 +116,31 @@ export default function CreatePostScreen() {
         </View>
 
         {/* Photo upload area */}
-        <TouchableOpacity style={[styles.photoArea, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}>
-          <Ionicons name="camera-outline" size={32} color={colors.outline} />
-          <Text style={{ color: colors.outline, marginTop: 8, fontSize: 14 }}>Add Photos (up to 5)</Text>
-          <Text style={{ color: colors.outline, fontSize: 12 }}>Tap to upload or drag to reorder</Text>
-        </TouchableOpacity>
+        {selectedPhotos.length === 0 ? (
+          <TouchableOpacity onPress={handlePickPhotos}
+            style={[styles.photoArea, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}>
+            <Ionicons name="camera-outline" size={32} color={colors.outline} />
+            <Text style={{ color: colors.outline, marginTop: 8, fontSize: 14 }}>Add Photos (up to 5)</Text>
+            <Text style={{ color: colors.outline, fontSize: 12 }}>Tap to upload from gallery</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.photosRow}>
+            {selectedPhotos.map((photo, idx) => (
+              <View key={idx} style={styles.photoThumb}>
+                <Image source={{ uri: photo.uri }} style={styles.photoImg} />
+                <TouchableOpacity onPress={() => removePhoto(idx)} style={styles.removePhoto}>
+                  <Ionicons name="close-circle" size={20} color="#ef4444" />
+                </TouchableOpacity>
+              </View>
+            ))}
+            {selectedPhotos.length < 5 && (
+              <TouchableOpacity onPress={handlePickPhotos}
+                style={[styles.addPhotoBtn, { borderColor: colors.outlineVariant }]}>
+                <Ionicons name="add" size={24} color={colors.outline} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         <Input label="Dish Name *" placeholder="e.g. Couscous Royal" value={title} onChangeText={setTitle} icon="restaurant-outline" />
         <Input label="Description" placeholder="Describe your dish..." value={description} onChangeText={setDescription}
@@ -81,7 +173,7 @@ export default function CreatePostScreen() {
           ))}
         </View>
 
-        <Button title="Publish Special" onPress={handlePublish} loading={isLoading} size="lg" />
+        <Button title="Publish Special" onPress={handlePublish} loading={isLoading || storeLoading} size="lg" />
         <View style={{ height: 32 }} />
       </ScrollView>
     </ScreenWrapper>
@@ -92,6 +184,11 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, marginTop: 8 },
   title: { fontFamily: 'NotoSerif-Bold', fontSize: 22, fontWeight: '700' },
   photoArea: { height: 140, borderRadius: 16, borderWidth: 2, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  photosRow: { flexDirection: 'row', gap: 8, marginBottom: 20, flexWrap: 'wrap' },
+  photoThumb: { width: 80, height: 80, borderRadius: 12, overflow: 'hidden' },
+  photoImg: { width: '100%', height: '100%' },
+  removePhoto: { position: 'absolute', top: 2, right: 2 },
+  addPhotoBtn: { width: 80, height: 80, borderRadius: 12, borderWidth: 2, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
   toggleCard: { borderRadius: 16, marginBottom: 24, overflow: 'hidden' },
   toggleRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, gap: 12 },
   toggleLabel: { flex: 1, fontFamily: 'PlusJakartaSans-Regular', fontSize: 15 },

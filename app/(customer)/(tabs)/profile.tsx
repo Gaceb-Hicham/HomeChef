@@ -1,32 +1,35 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
+import { useLanguage } from '@/hooks/useLanguage';
 import { Button, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
-
-const MENU_ITEMS = [
-  { icon: 'person-outline', label: 'Edit Profile', route: '' },
-  { icon: 'location-outline', label: 'My Addresses', route: '' },
-  { icon: 'card-outline', label: 'Payment Methods', route: '' },
-  { icon: 'heart-outline', label: 'Saved Favorites', route: '/(customer)/saved' },
-  { icon: 'notifications-outline', label: 'Notifications', route: '/(customer)/notifications' },
-  { icon: 'language-outline', label: 'Language', route: '' },
-  { icon: 'moon-outline', label: 'Dark Mode', route: '' },
-  { icon: 'help-circle-outline', label: 'Help & Support', route: '' },
-  { icon: 'information-circle-outline', label: 'About HomeChef', route: '' },
-];
 
 export default function ProfileScreen() {
   const { colors, shadows } = useTheme();
   const router = useRouter();
   const { profile, signOut } = useAuthStore();
+  const { t, currentLanguage, changeLanguage } = useLanguage();
+  const [showLangModal, setShowLangModal] = useState(false);
+
+  const MENU_ITEMS = [
+    { icon: 'person-outline', label: t('profile.edit'), route: '' },
+    { icon: 'location-outline', label: t('cart.checkout') === 'Checkout' ? 'My Addresses' : 'عناويني', route: '' },
+    { icon: 'card-outline', label: t('checkout.payment'), route: '' },
+    { icon: 'heart-outline', label: t('saved.title'), route: '/(customer)/saved' },
+    { icon: 'notifications-outline', label: t('notifications.title'), route: '/(customer)/notifications' },
+    { icon: 'language-outline', label: `${t('profile.language')} — ${currentLanguage === 'en' ? 'English' : 'العربية'}`, action: () => setShowLangModal(true) },
+    { icon: 'map-outline', label: currentLanguage === 'en' ? 'Nearby Chefs Map' : 'خريطة الطباخين', route: '/(customer)/explore-map' },
+    { icon: 'help-circle-outline', label: t('profile.help'), route: '' },
+    { icon: 'information-circle-outline', label: t('profile.about'), route: '' },
+  ];
 
   const handleLogout = () => {
-    Alert.alert('Log Out', 'Are you sure you want to log out?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Log Out', style: 'destructive', onPress: () => { signOut(); router.replace('/(auth)/login'); } },
+    Alert.alert(t('auth.logout'), currentLanguage === 'en' ? 'Are you sure you want to log out?' : 'هل أنت متأكد من تسجيل الخروج؟', [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('auth.logout'), style: 'destructive', onPress: () => { signOut(); router.replace('/(auth)/login'); } },
     ]);
   };
 
@@ -41,7 +44,11 @@ export default function ProfileScreen() {
           <Text style={[styles.name, { color: colors.onBackground }]}>{profile?.full_name || 'Guest User'}</Text>
           <Text style={[styles.email, { color: colors.onSurfaceVariant }]}>{profile?.email || 'guest@homechef.app'}</Text>
           <View style={[styles.statRow]}>
-            {[{ n: '12', l: 'Orders' }, { n: '5', l: 'Reviews' }, { n: '8', l: 'Saved' }].map((s) => (
+            {[
+              { n: '12', l: currentLanguage === 'en' ? 'Orders' : 'طلبات' },
+              { n: '5', l: currentLanguage === 'en' ? 'Reviews' : 'تقييمات' },
+              { n: '8', l: currentLanguage === 'en' ? 'Saved' : 'محفوظات' },
+            ].map((s) => (
               <View key={s.l} style={styles.stat}>
                 <Text style={[styles.statNum, { color: colors.primary }]}>{s.n}</Text>
                 <Text style={[styles.statLabel, { color: colors.onSurfaceVariant }]}>{s.l}</Text>
@@ -54,7 +61,10 @@ export default function ProfileScreen() {
         <View style={[styles.menu, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
           {MENU_ITEMS.map((item, idx) => (
             <TouchableOpacity key={item.label}
-              onPress={() => item.route && router.push(item.route as any)}
+              onPress={() => {
+                if ((item as any).action) (item as any).action();
+                else if ((item as any).route) router.push((item as any).route as any);
+              }}
               style={[styles.menuItem, idx < MENU_ITEMS.length - 1 && { borderBottomColor: colors.outlineVariant, borderBottomWidth: 0.5 }]}>
               <Ionicons name={item.icon as any} size={22} color={colors.onSurfaceVariant} />
               <Text style={[styles.menuLabel, { color: colors.onSurface }]}>{item.label}</Text>
@@ -66,11 +76,40 @@ export default function ProfileScreen() {
         {/* Logout */}
         <TouchableOpacity style={[styles.logoutBtn, { borderColor: colors.error }]} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color={colors.error} />
-          <Text style={[styles.logoutText, { color: colors.error }]}>Log Out</Text>
+          <Text style={[styles.logoutText, { color: colors.error }]}>{t('auth.logout')}</Text>
         </TouchableOpacity>
 
         <Text style={[styles.version, { color: colors.outline }]}>HomeChef v1.0.0</Text>
       </ScrollView>
+
+      {/* Language Modal */}
+      <Modal visible={showLangModal} transparent animationType="fade">
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowLangModal(false)}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surfaceContainerLowest, ...shadows.lg }]}>
+            <Text style={[styles.modalTitle, { color: colors.onBackground }]}>{t('profile.language')}</Text>
+
+            {[
+              { code: 'en' as const, label: 'English', flag: '🇬🇧' },
+              { code: 'ar' as const, label: 'العربية', flag: '🇩🇿' },
+            ].map((lang) => (
+              <TouchableOpacity key={lang.code}
+                onPress={() => { changeLanguage(lang.code); setShowLangModal(false); }}
+                style={[styles.langOption, {
+                  backgroundColor: currentLanguage === lang.code ? colors.primaryFixed : 'transparent',
+                  borderColor: currentLanguage === lang.code ? colors.primary : colors.outlineVariant,
+                }]}>
+                <Text style={{ fontSize: 24 }}>{lang.flag}</Text>
+                <Text style={[styles.langLabel, { color: currentLanguage === lang.code ? colors.primary : colors.onSurface }]}>
+                  {lang.label}
+                </Text>
+                {currentLanguage === lang.code && (
+                  <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScreenWrapper>
   );
 }
@@ -90,4 +129,9 @@ const styles = StyleSheet.create({
   logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderRadius: 14, paddingVertical: 14, marginBottom: 16 },
   logoutText: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 15, fontWeight: '600' },
   version: { textAlign: 'center', fontFamily: 'PlusJakartaSans-Regular', fontSize: 12, marginBottom: 32 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { width: '80%', maxWidth: 340, borderRadius: 20, padding: 24 },
+  modalTitle: { fontFamily: 'NotoSerif-Bold', fontSize: 20, fontWeight: '700', textAlign: 'center', marginBottom: 20 },
+  langOption: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 14, borderWidth: 1.5, marginBottom: 10, gap: 12 },
+  langLabel: { flex: 1, fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 16, fontWeight: '600' },
 });
