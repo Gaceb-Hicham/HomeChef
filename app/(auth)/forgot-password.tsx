@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function ForgotPasswordScreen() {
     setIsLoading(true);
     const { error: e } = await resetPassword(email);
     setIsLoading(false);
-    if (e) Alert.alert('Error', e);
+    if (e) infoAlert('Error', e);
     else setIsSent(true);
   };
 

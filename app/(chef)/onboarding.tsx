@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useChefProfileStore } from '@/stores/appStores';
 import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
 export default function ChefOnboardingScreen() {
   const router = useRouter();
@@ -19,8 +20,8 @@ export default function ChefOnboardingScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSetup = async () => {
-    if (!kitchenName.trim()) { Alert.alert('Required', 'Please enter your kitchen name.'); return; }
-    if (!profile?.id) { Alert.alert('Error', 'Please log in first.'); return; }
+    if (!kitchenName.trim()) { infoAlert('Required', 'Please enter your kitchen name.'); return; }
+    if (!profile?.id) { infoAlert('Error', 'Please log in first.'); return; }
     setIsLoading(true);
     const { error } = await createProfile({
       user_id: profile.id,
@@ -31,7 +32,7 @@ export default function ChefOnboardingScreen() {
     });
     setIsLoading(false);
     if (error) {
-      Alert.alert('Error', error);
+      infoAlert('Error', error);
     } else {
       router.replace('/(chef)/(tabs)/dashboard');
     }
@@ -50,7 +51,7 @@ export default function ChefOnboardingScreen() {
 
         {/* Cover photo */}
         <TouchableOpacity style={[styles.coverArea, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}
-          onPress={() => Alert.alert('Cover Photo', 'Photo upload is available on mobile devices. You can add a cover photo later from Kitchen Settings.')}>
+          onPress={() => infoAlert('Cover Photo', 'Photo upload is available on mobile devices. You can add a cover photo later from Kitchen Settings.')}>
           <Ionicons name="image-outline" size={28} color={colors.outline} />
           <Text style={{ color: colors.outline, marginTop: 6, fontSize: 13 }}>Add Cover Photo (optional)</Text>
         </TouchableOpacity>

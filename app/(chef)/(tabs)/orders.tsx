@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Linking } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useOrdersStore } from '@/stores/ordersStore';
 import { ScreenWrapper, Button } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
 const STATUS_TABS = ['All', 'received', 'preparing', 'ready', 'out_for_delivery', 'delivered'];
 const STATUS_FLOW: Record<string, string> = {
@@ -43,7 +44,7 @@ export default function ChefOrdersScreen() {
 
     const { error } = await updateOrderStatus(orderId, nextStatus);
     if (error) {
-      Alert.alert('Error', error);
+      infoAlert('Error', error);
     }
   }, []);
 

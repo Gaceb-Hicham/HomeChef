@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
 export default function LocationScreen() {
   const router = useRouter();
@@ -38,7 +39,7 @@ export default function LocationScreen() {
   };
 
   const handleManualSave = async () => {
-    if (!city.trim()) { Alert.alert('Error', 'Please enter your city'); return; }
+    if (!city.trim()) { infoAlert('Error', 'Please enter your city'); return; }
     setIsLoading(true);
     await updateProfile({ city, area });
     setIsLoading(false);

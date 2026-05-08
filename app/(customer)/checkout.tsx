@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useCartStore } from '@/stores/cartStore';
@@ -7,6 +7,7 @@ import { useOrdersStore } from '@/stores/ordersStore';
 import { useAuthStore } from '@/stores/authStore';
 import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
 const TIME_SLOTS = ['12:00 - 12:30', '12:30 - 13:00', '13:00 - 13:30', '13:30 - 14:00'];
 
@@ -35,7 +36,7 @@ export default function CheckoutScreen() {
 
   const handlePlaceOrder = async () => {
     if (!profile?.id) {
-      Alert.alert('Error', 'Please log in to place an order');
+      infoAlert('Error', 'Please log in to place an order');
       return;
     }
 
@@ -70,12 +71,12 @@ export default function CheckoutScreen() {
       await Promise.all(orderPromises);
       setIsLoading(false);
       clearCart();
-      Alert.alert('🎉 Order Placed!', 'Your order has been confirmed. Track it in My Orders.', [
+      crossAlert('🎉 Order Placed!', 'Your order has been confirmed. Track it in My Orders.', [
         { text: 'View Orders', onPress: () => router.replace('/(customer)/(tabs)/orders') },
       ]);
     } catch (e: any) {
       setIsLoading(false);
-      Alert.alert('Order Failed', e.message || 'Something went wrong. Please try again.');
+      infoAlert('Order Failed', e.message || 'Something went wrong. Please try again.');
     }
   };
 

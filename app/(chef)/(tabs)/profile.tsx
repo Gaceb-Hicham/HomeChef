@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
@@ -9,6 +9,7 @@ import { chefApi, followersApi } from '@/lib';
 import { supabase } from '@/lib/supabase';
 import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
 export default function ChefProfileScreen() {
   const { colors, shadows } = useTheme();
@@ -59,11 +60,11 @@ export default function ChefProfileScreen() {
     });
     setIsSaving(false);
     if (error) {
-      Alert.alert('Error', error);
+      infoAlert('Error', error);
     } else {
       fetchProfile(profile.id);
       setShowEditModal(false);
-      Alert.alert('Success', 'Kitchen settings updated!');
+      infoAlert('Success', 'Kitchen settings updated!');
     }
   };
 
@@ -77,7 +78,7 @@ export default function ChefProfileScreen() {
     { icon: 'storefront-outline', label: 'Kitchen Settings', action: openEdit },
     { icon: 'images-outline', label: 'Kitchen Archive', route: '/(chef)/archive' },
     { icon: 'language-outline', label: `Language — ${currentLanguage === 'en' ? 'English' : 'العربية'}`, action: () => setShowLangModal(true) },
-    { icon: 'information-circle-outline', label: 'About HomeChef', action: () => Alert.alert('HomeChef', 'A marketplace connecting home cooks with local customers.\n\nVersion 1.0.0') },
+    { icon: 'information-circle-outline', label: 'About HomeChef', action: () => infoAlert('HomeChef', 'A marketplace connecting home cooks with local customers.\n\nVersion 1.0.0') },
   ];
 
   return (
@@ -115,7 +116,7 @@ export default function ChefProfileScreen() {
         </View>
 
         <TouchableOpacity style={[styles.logout, { borderColor: colors.error }]}
-          onPress={() => Alert.alert('Log Out', 'Are you sure?', [
+          onPress={() => crossAlert('Log Out', 'Are you sure?', [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Log Out', style: 'destructive', onPress: () => { signOut(); router.replace('/(auth)/login'); } },
           ])}>

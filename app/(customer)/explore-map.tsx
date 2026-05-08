@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { chefApi } from '@/lib';
 import { MapView } from '@/components/MapView';
 import { ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
 export default function ExploreMapScreen() {
   const router = useRouter();
@@ -43,7 +44,7 @@ export default function ExploreMapScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.onSurface} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.onBackground }]}>Nearby Chefs</Text>
-        <TouchableOpacity onPress={() => Alert.alert('Filter', 'Filter by cuisine, rating, and distance coming soon!')}>
+        <TouchableOpacity onPress={() => infoAlert('Filter', 'Filter by cuisine, rating, and distance coming soon!')}>
           <Ionicons name="filter-outline" size={22} color={colors.onSurface} />
         </TouchableOpacity>
       </View>

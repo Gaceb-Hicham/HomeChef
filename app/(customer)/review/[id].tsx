@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { reviewsApi, ordersApi } from '@/lib';
 import { Button, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
 export default function ReviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -43,7 +44,7 @@ export default function ReviewScreen() {
   );
 
   const handleSubmit = async () => {
-    if (overall === 0) { Alert.alert('Rating Required', 'Please give an overall rating.'); return; }
+    if (overall === 0) { infoAlert('Rating Required', 'Please give an overall rating.'); return; }
     if (!profile?.id || !id) return;
 
     setIsLoading(true);
@@ -61,9 +62,9 @@ export default function ReviewScreen() {
     setIsLoading(false);
 
     if (error) {
-      Alert.alert('Error', error);
+      infoAlert('Error', error);
     } else {
-      Alert.alert('Thank You! 🎉', 'Your review has been submitted.', [
+      crossAlert('Thank You! 🎉', 'Your review has been submitted.', [
         { text: 'Done', onPress: () => router.back() },
       ]);
     }

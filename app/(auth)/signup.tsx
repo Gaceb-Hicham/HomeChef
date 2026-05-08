@@ -7,13 +7,13 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -50,7 +50,7 @@ export default function SignUpScreen() {
     const { error } = await signUp(email, password, fullName, phone, selectedRole || 'customer');
     setIsLoading(false);
     if (error) {
-      Alert.alert('Sign Up Failed', error);
+      infoAlert('Sign Up Failed', error);
     } else {
       router.push({ pathname: '/(auth)/otp', params: { email, phone } });
     }
@@ -163,14 +163,14 @@ export default function SignUpScreen() {
           <View style={styles.socialRow}>
             <TouchableOpacity
               style={[styles.socialButton, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}
-              onPress={() => Alert.alert('Google Sign Up', 'Google authentication will be available soon. Please use email sign up for now.')}
+              onPress={() => infoAlert('Google Sign Up', 'Google authentication will be available soon. Please use email sign up for now.')}
             >
               <Ionicons name="logo-google" size={22} color={colors.onSurface} />
               <Text style={[styles.socialText, { color: colors.onSurface }]}>Google</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.socialButton, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}
-              onPress={() => Alert.alert('Apple Sign Up', 'Apple authentication will be available soon. Please use email sign up for now.')}
+              onPress={() => infoAlert('Apple Sign Up', 'Apple authentication will be available soon. Please use email sign up for now.')}
             >
               <Ionicons name="logo-apple" size={22} color={colors.onSurface} />
               <Text style={[styles.socialText, { color: colors.onSurface }]}>Apple</Text>

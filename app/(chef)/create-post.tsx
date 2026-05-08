@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
@@ -7,6 +7,7 @@ import { usePostsStore } from '@/stores/postsStore';
 import { pickImage, uploadPostPhotos } from '@/lib/storage';
 import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
 export default function CreatePostScreen() {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function CreatePostScreen() {
       }
     } catch (e) {
       // Fallback for web — photos are optional
-      Alert.alert('Info', 'Photo upload requires a native device. You can still publish without photos.');
+      infoAlert('Info', 'Photo upload requires a native device. You can still publish without photos.');
     }
   };
 
@@ -47,12 +48,12 @@ export default function CreatePostScreen() {
 
   const handlePublish = async () => {
     if (!title.trim() || !price || !quantity) {
-      Alert.alert('Missing Fields', 'Please fill in title, price, and quantity.');
+      infoAlert('Missing Fields', 'Please fill in title, price, and quantity.');
       return;
     }
 
     if (!profile?.id) {
-      Alert.alert('Error', 'Please log in first');
+      infoAlert('Error', 'Please log in first');
       return;
     }
 
@@ -92,15 +93,15 @@ export default function CreatePostScreen() {
       setIsLoading(false);
 
       if (error) {
-        Alert.alert('Error', error);
+        infoAlert('Error', error);
       } else {
-        Alert.alert('Published! 🎉', 'Your daily special is now live. All followers have been notified.', [
+        crossAlert('Published! 🎉', 'Your daily special is now live. All followers have been notified.', [
           { text: 'Done', onPress: () => router.back() },
         ]);
       }
     } catch (e: any) {
       setIsLoading(false);
-      Alert.alert('Error', e.message || 'Failed to publish');
+      infoAlert('Error', e.message || 'Failed to publish');
     }
   };
 

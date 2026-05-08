@@ -7,13 +7,13 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -42,7 +42,7 @@ export default function LoginScreen() {
     const { error } = await signIn(email, password);
     setIsLoading(false);
     if (error) {
-      Alert.alert('Login Failed', error);
+      infoAlert('Login Failed', error);
     } else {
       const profile = useAuthStore.getState().profile;
       if (profile?.role === 'chef') {

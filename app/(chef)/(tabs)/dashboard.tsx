@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
@@ -8,6 +8,7 @@ import { useChefProfileStore } from '@/stores/appStores';
 import { useRealtimeChefOrders } from '@/hooks/useRealtime';
 import { Button, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
 
 
@@ -21,7 +22,7 @@ export default function DashboardScreen() {
   // Subscribe to real-time incoming orders
   useRealtimeChefOrders(profile?.id || '', (order) => {
     handleNewChefOrder(order);
-    Alert.alert('🔔 New Order!', `You have a new order`, [{ text: 'View', onPress: () => router.push('/(chef)/(tabs)/orders') }]);
+    crossAlert('🔔 New Order!', `You have a new order`, [{ text: 'View', onPress: () => router.push('/(chef)/(tabs)/orders') }]);
   });
 
   // Fetch data on mount

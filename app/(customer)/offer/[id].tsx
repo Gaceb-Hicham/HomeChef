@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
@@ -8,6 +8,7 @@ import { useCartStore } from '@/stores/cartStore';
 import { useSavedStore } from '@/stores/appStores';
 import { ScreenWrapper, Button } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
 
 
@@ -73,7 +74,7 @@ export default function OfferDetailScreen() {
       const { updateQuantity } = useCartStore.getState();
       updateQuantity(id || post.id, qty);
     }
-    Alert.alert('Added to Cart 🛒', `${qty}× ${post.title} added.`, [
+    crossAlert('Added to Cart 🛒', `${qty}× ${post.title} added.`, [
       { text: 'Continue Browsing', style: 'cancel' },
       { text: 'View Cart', onPress: () => router.push('/(customer)/(tabs)/cart') },
     ]);

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Alert,
   Keyboard,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -13,6 +12,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { Button, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60;
@@ -91,7 +91,7 @@ export default function OTPScreen() {
     const { error } = await useAuthStore.getState().verifyOtp(email, code);
     setIsLoading(false);
     if (error) {
-      Alert.alert('Verification Failed', error);
+      infoAlert('Verification Failed', error);
       setOtp(Array(OTP_LENGTH).fill(''));
       inputRefs.current[0]?.focus();
     } else {
@@ -101,7 +101,7 @@ export default function OTPScreen() {
 
   const handleResend = () => {
     if (resendCount >= MAX_RESEND) {
-      Alert.alert('Limit Reached', 'You have exceeded the maximum resend attempts. Please try again later.');
+      infoAlert('Limit Reached', 'You have exceeded the maximum resend attempts. Please try again later.');
       return;
     }
     setTimer(RESEND_COOLDOWN);

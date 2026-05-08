@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
@@ -8,6 +8,7 @@ import { savedApi, ordersApi } from '@/lib';
 import { supabase } from '@/lib/supabase';
 import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
 export default function ProfileScreen() {
   const { colors, shadows } = useTheme();
@@ -57,19 +58,19 @@ export default function ProfileScreen() {
     setIsSaving(false);
 
     if (error) {
-      Alert.alert('Error', error.message);
+      infoAlert('Error', error.message);
     } else {
       // Update local state
       if (updateProfile) {
         updateProfile({ full_name: editName.trim(), phone: editPhone.trim(), city: editCity.trim(), area: editArea.trim() });
       }
       setShowEditModal(false);
-      Alert.alert('Success', 'Profile updated successfully');
+      infoAlert('Success', 'Profile updated successfully');
     }
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
+    crossAlert(
       '⚠️ Delete Account',
       'This action is irreversible. All your data will be permanently deleted.',
       [
@@ -84,8 +85,7 @@ export default function ProfileScreen() {
               signOut();
               router.replace('/(auth)/login');
             } catch (e: any) {
-              // Fallback: sign out and let cascade handle it
-              Alert.alert('Note', 'Your account deletion request has been submitted. You will be signed out.');
+              infoAlert('Note', 'Your account deletion request has been submitted. You will be signed out.');
               signOut();
               router.replace('/(auth)/login');
             }
@@ -105,7 +105,7 @@ export default function ProfileScreen() {
   ];
 
   const handleLogout = () => {
-    Alert.alert(t('auth.logout'), currentLanguage === 'en' ? 'Are you sure you want to log out?' : 'هل أنت متأكد من تسجيل الخروج؟', [
+    crossAlert(t('auth.logout'), currentLanguage === 'en' ? 'Are you sure you want to log out?' : 'هل أنت متأكد من تسجيل الخروج؟', [
       { text: t('cancel'), style: 'cancel' },
       { text: t('auth.logout'), style: 'destructive', onPress: () => { signOut(); router.replace('/(auth)/login'); } },
     ]);

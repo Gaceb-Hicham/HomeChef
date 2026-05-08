@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useOrdersStore } from '@/stores/ordersStore';
 import { ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
 const { width } = Dimensions.get('window');
 
@@ -109,7 +110,7 @@ export default function EarningsScreen() {
 
         {/* Withdrawal CTA */}
         <TouchableOpacity style={[styles.withdrawBtn, { borderColor: colors.primary }]}
-          onPress={() => Alert.alert('Request Payout', total > 0 ? `You have ${total.toLocaleString()} DA available for payout. This feature will be available soon.` : 'No earnings available for payout yet.')}>
+          onPress={() => infoAlert('Request Payout', total > 0 ? `You have ${total.toLocaleString()} DA available for payout. This feature will be available soon.` : 'No earnings available for payout yet.')}>
           <Ionicons name="download-outline" size={20} color={colors.primary} />
           <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 15, marginLeft: 8 }}>Request Payout</Text>
         </TouchableOpacity>
