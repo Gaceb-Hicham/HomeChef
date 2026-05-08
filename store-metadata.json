@@ -1,0 +1,47 @@
+{
+  "en": {
+    "title": "HomeChef - Homemade Food Marketplace",
+    "subtitle": "Order fresh dishes from local chefs",
+    "description": "Discover and order delicious homemade meals from talented home chefs in your neighborhood.\n\n🍲 DISCOVER LOCAL CHEFS\nBrowse daily specials from home cooks near you. See ratings, reviews, and chef profiles before ordering.\n\n🗺️ EXPLORE ON THE MAP\nFind nearby kitchens using the interactive map. See who's cooking today and what's available.\n\n🛒 EASY ORDERING\nAdd dishes to your cart, choose delivery or pickup, and pay with card or cash. It's that simple.\n\n📍 LIVE TRACKING\nTrack your order in real-time from kitchen to your door. Get live updates at every step.\n\n⭐ RATE & REVIEW\nShare your experience — rate taste, packaging, and accuracy to help other food lovers.\n\n❤️ SAVE FAVORITES\nBookmark your favorite dishes and follow chefs you love. Never miss a daily special.\n\n🌍 BILINGUAL\nFull Arabic and English support with RTL layout.\n\n--- FOR HOME CHEFS ---\n\n👨‍🍳 SELL YOUR FOOD\nTurn your passion into income. Post daily specials with photos, set prices, and manage orders.\n\n📊 TRACK EARNINGS\nSee daily, weekly, and monthly revenue. Request payouts anytime.\n\n🔔 REAL-TIME ORDERS\nGet instant notifications for new orders. Update status as you prepare and deliver.\n\nDownload HomeChef today and taste the difference homemade makes!",
+    "keywords": "homemade food, home chef, food delivery, local food, home cooking, artisan food, fresh meals, food marketplace, Algeria, DZ",
+    "promotional_text": "🍳 Fresh homemade food from your neighbors — order in seconds!",
+    "whats_new": "• Demo mode — explore the app without an account\n• Interactive map to discover nearby chefs\n• Arabic language support with RTL\n• Stripe payments for card checkout\n• Offline caching for faster loading"
+  },
+  "ar": {
+    "title": "هوم شاف - سوق الطعام المنزلي",
+    "subtitle": "اطلب أطباق طازجة من طباخين محليين",
+    "description": "اكتشف واطلب وجبات منزلية لذيذة من طباخين موهوبين في حيّك.\n\n🍲 اكتشف الطباخين المحليين\nتصفح العروض اليومية من الطباخين القريبين منك.\n\n🗺️ استكشف على الخريطة\nابحث عن المطابخ القريبة باستخدام الخريطة التفاعلية.\n\n🛒 طلب سهل\nأضف أطباق إلى سلتك، اختر التوصيل أو الاستلام، وادفع بالبطاقة أو نقداً.\n\n📍 تتبع مباشر\nتتبع طلبك في الوقت الحقيقي من المطبخ إلى بابك.\n\nحمّل هوم شاف اليوم!",
+    "keywords": "طعام منزلي, طباخ, توصيل طعام, أكل محلي, طبخ منزلي, الجزائر",
+    "promotional_text": "🍳 طعام منزلي طازج من جيرانك — اطلب في ثوانٍ!"
+  },
+  "screenshots": {
+    "order": [
+      "01_home_feed.png",
+      "02_search_explore.png",
+      "03_dish_detail.png",
+      "04_cart_checkout.png",
+      "05_order_tracking.png",
+      "06_chef_dashboard.png",
+      "07_explore_map.png",
+      "08_language_switch.png"
+    ],
+    "captions": {
+      "01_home_feed": "Discover daily specials from home chefs near you",
+      "02_search_explore": "Search by dish, cuisine, or chef name",
+      "03_dish_detail": "See photos, ingredients, and reviews before ordering",
+      "04_cart_checkout": "Simple checkout with card or cash payment",
+      "05_order_tracking": "Track your order in real-time on the map",
+      "06_chef_dashboard": "Chef dashboard with earnings and order management",
+      "07_explore_map": "Find nearby kitchens on the interactive map",
+      "08_language_switch": "Full Arabic support with right-to-left layout"
+    }
+  },
+  "categories": {
+    "primary": "Food & Drink",
+    "secondary": "Lifestyle"
+  },
+  "age_rating": "4+",
+  "privacy_url": "https://homechef.app/privacy",
+  "support_url": "https://homechef.app/support",
+  "marketing_url": "https://homechef.app"
+}

@@ -25,6 +25,7 @@ interface AuthState {
   isOnboarded: boolean;
   selectedRole: UserRole | null;
   hasSeenOnboarding: boolean;
+  isDemoMode: boolean;
 
   // Actions
   setSession: (session: Session | null) => void;
@@ -39,6 +40,7 @@ interface AuthState {
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   fetchProfile: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: string | null }>;
+  demoLogin: (role: UserRole) => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -49,6 +51,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isOnboarded: false,
   selectedRole: null,
   hasSeenOnboarding: false,
+  isDemoMode: false,
 
   setSession: (session) => set({ session, user: session?.user ?? null }),
   setProfile: (profile) => set({ profile }),
@@ -99,8 +102,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
-    await supabase.auth.signOut();
-    set({ session: null, user: null, profile: null });
+    if (!get().isDemoMode) {
+      await supabase.auth.signOut();
+    }
+    set({ session: null, user: null, profile: null, isDemoMode: false });
   },
 
   resetPassword: async (email) => {
@@ -141,5 +146,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     set({ profile: { ...profile, ...updates } });
     return { error: null };
+  },
+
+  demoLogin: (role) => {
+    const demoProfile: UserProfile = {
+      id: 'demo-user-001',
+      full_name: role === 'chef' ? 'Chef Ahmed' : 'Sarah Foodie',
+      email: role === 'chef' ? 'chef@demo.homechef' : 'sarah@demo.homechef',
+      phone: '+213 555 1234',
+      role,
+      profile_photo_url: null,
+      city: 'Algiers',
+      area: 'Bab El Oued',
+      is_verified: true,
+      is_active: true,
+    };
+    set({
+      profile: demoProfile,
+      selectedRole: role,
+      isLoading: false,
+      isOnboarded: true,
+      isDemoMode: true,
+    });
   },
 }));

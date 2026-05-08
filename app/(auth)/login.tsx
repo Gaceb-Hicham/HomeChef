@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 export default function LoginScreen() {
   const router = useRouter();
   const { colors, spacing, rounded } = useTheme();
-  const { signIn } = useAuthStore();
+  const { signIn, demoLogin } = useAuthStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -131,21 +131,34 @@ export default function LoginScreen() {
           {/* Divider */}
           <View style={styles.dividerRow}>
             <View style={[styles.dividerLine, { backgroundColor: colors.outlineVariant }]} />
-            <Text style={[styles.dividerText, { color: colors.outline }]}>or continue with</Text>
+            <Text style={[styles.dividerText, { color: colors.outline }]}>or try demo mode</Text>
             <View style={[styles.dividerLine, { backgroundColor: colors.outlineVariant }]} />
           </View>
 
-          {/* Social buttons */}
-          <View style={styles.socialRow}>
+          {/* Demo Mode Buttons */}
+          <View style={styles.demoRow}>
             <TouchableOpacity
-              style={[styles.socialButton, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}
+              style={[styles.demoButton, { backgroundColor: colors.primaryFixed, borderColor: colors.primary }]}
+              onPress={() => {
+                demoLogin('customer');
+                router.replace('/(customer)/(tabs)/home');
+              }}
             >
-              <Ionicons name="logo-google" size={22} color={colors.onSurface} />
+              <Text style={{ fontSize: 24 }}>🍽️</Text>
+              <Text style={[styles.demoTitle, { color: colors.primary }]}>Customer Demo</Text>
+              <Text style={[styles.demoSubtitle, { color: colors.onSurfaceVariant }]}>Browse & order food</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
-              style={[styles.socialButton, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}
+              style={[styles.demoButton, { backgroundColor: colors.primaryFixed, borderColor: colors.primary }]}
+              onPress={() => {
+                demoLogin('chef');
+                router.replace('/(chef)/(tabs)/dashboard');
+              }}
             >
-              <Ionicons name="logo-apple" size={22} color={colors.onSurface} />
+              <Text style={{ fontSize: 24 }}>👨‍🍳</Text>
+              <Text style={[styles.demoTitle, { color: colors.primary }]}>Chef Demo</Text>
+              <Text style={[styles.demoSubtitle, { color: colors.onSurfaceVariant }]}>Manage your kitchen</Text>
             </TouchableOpacity>
           </View>
 
@@ -262,5 +275,28 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: 14,
     fontWeight: '600',
+  },
+  demoRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 32,
+  },
+  demoButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    gap: 4,
+  },
+  demoTitle: {
+    fontFamily: 'PlusJakartaSans-SemiBold',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  demoSubtitle: {
+    fontFamily: 'PlusJakartaSans-Regular',
+    fontSize: 11,
   },
 });

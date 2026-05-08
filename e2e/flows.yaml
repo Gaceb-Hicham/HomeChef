@@ -1,0 +1,110 @@
+appId: com.homechef.app
+name: HomeChef E2E Tests
+---
+
+# ========================================
+# Auth Flow Tests
+# ========================================
+
+- runFlow:
+    name: "Demo Login as Customer"
+    commands:
+      - launchApp
+      - assertVisible: "Welcome back"
+      - assertVisible: "Customer Demo"
+      - tapOn: "Customer Demo"
+      - assertVisible: "Good"  # Good morning/afternoon/evening
+      - assertVisible: "Today's Specials"
+
+- runFlow:
+    name: "Demo Login as Chef"
+    commands:
+      - launchApp
+      - assertVisible: "Welcome back"
+      - assertVisible: "Chef Demo"
+      - tapOn: "Chef Demo"
+      - assertVisible: "Welcome back"  # Chef dashboard
+      - assertVisible: "Today's Orders"
+
+# ========================================
+# Customer Navigation Tests
+# ========================================
+
+- runFlow:
+    name: "Customer Tab Navigation"
+    commands:
+      - launchApp
+      - tapOn: "Customer Demo"
+      - assertVisible: "Today's Specials"
+      # Navigate to Search
+      - tapOn: "Search"
+      - assertVisible: "Search dishes"
+      # Navigate to Cart
+      - tapOn: "Cart"
+      - assertVisible: "Your cart is empty"
+      # Navigate to Orders
+      - tapOn: "Orders"
+      - assertVisible: "My Orders"
+      # Navigate to Profile
+      - tapOn: "Profile"
+      - assertVisible: "Guest User"
+
+# ========================================
+# Search Flow Tests
+# ========================================
+
+- runFlow:
+    name: "Search for Dishes"
+    commands:
+      - launchApp
+      - tapOn: "Customer Demo"
+      - tapOn: "Search"
+      - tapOn: "Search dishes"
+      - inputText: "Couscous"
+      - assertVisible: "Couscous"
+
+# ========================================
+# Profile & Language Tests
+# ========================================
+
+- runFlow:
+    name: "Language Switcher"
+    commands:
+      - launchApp
+      - tapOn: "Customer Demo"
+      - tapOn: "Profile"
+      - assertVisible: "Language"
+      - tapOn:
+          text: "Language"
+      - assertVisible: "العربية"
+      - assertVisible: "English"
+
+# ========================================
+# Chef Dashboard Tests
+# ========================================
+
+- runFlow:
+    name: "Chef Dashboard Overview"
+    commands:
+      - launchApp
+      - tapOn: "Chef Demo"
+      - assertVisible: "Today's Orders"
+      - assertVisible: "Today's Revenue"
+      # Navigate to Earnings
+      - tapOn: "Earnings"
+      - assertVisible: "Total Revenue"
+      - assertVisible: "This Week"
+
+# ========================================
+# Explore Map Tests
+# ========================================
+
+- runFlow:
+    name: "Explore Nearby Chefs Map"
+    commands:
+      - launchApp
+      - tapOn: "Customer Demo"
+      - tapOn: "Profile"
+      - tapOn: "Nearby Chefs Map"
+      - assertVisible: "open kitchens nearby"
+      - assertVisible: "Map View"
