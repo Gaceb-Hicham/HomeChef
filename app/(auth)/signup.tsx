@@ -163,12 +163,14 @@ export default function SignUpScreen() {
           <View style={styles.socialRow}>
             <TouchableOpacity
               style={[styles.socialButton, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}
+              onPress={() => Alert.alert('Google Sign Up', 'Google authentication will be available soon. Please use email sign up for now.')}
             >
               <Ionicons name="logo-google" size={22} color={colors.onSurface} />
               <Text style={[styles.socialText, { color: colors.onSurface }]}>Google</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.socialButton, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}
+              onPress={() => Alert.alert('Apple Sign Up', 'Apple authentication will be available soon. Please use email sign up for now.')}
             >
               <Ionicons name="logo-apple" size={22} color={colors.onSurface} />
               <Text style={[styles.socialText, { color: colors.onSurface }]}>Apple</Text>

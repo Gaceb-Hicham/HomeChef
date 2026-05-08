@@ -19,9 +19,17 @@ export default function CheckoutScreen() {
 
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
   const [selectedSlot, setSelectedSlot] = useState(TIME_SLOTS[0]);
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('card');
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('cash');
   const [note, setNote] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [address, setAddress] = useState('');
+  const [showAddressInput, setShowAddressInput] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setAddress(profile.area && profile.city ? `${profile.area}, ${profile.city}` : '');
+    }
+  }, [profile]);
 
   const deliveryFee = deliveryType === 'delivery' ? 100 : 0;
 
@@ -46,7 +54,7 @@ export default function CheckoutScreen() {
           total_price: item.price * item.quantity,
           customer_note: note || null,
           delivery_type: deliveryType,
-          delivery_address: deliveryType === 'delivery' ? '123 Rue Didouche Mourad, Algiers' : null,
+          delivery_address: deliveryType === 'delivery' ? (address || `${profile.area || ''}, ${profile.city || ''}`) : null,
           payment_method: paymentMethod,
           payment_status: paymentMethod === 'cash' ? 'pending' : 'paid',
           order_status: 'received',
@@ -100,16 +108,21 @@ export default function CheckoutScreen() {
         {deliveryType === 'delivery' && (
           <>
             <Text style={[styles.section, { color: colors.onBackground }]}>Delivery Address</Text>
-            <TouchableOpacity style={[styles.addressCard, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant, ...shadows.sm }]}>
+            <TouchableOpacity style={[styles.addressCard, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant, ...shadows.sm }]}
+              onPress={() => setShowAddressInput(!showAddressInput)}>
               <Ionicons name="location" size={22} color={colors.primary} />
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={[styles.addressLabel, { color: colors.onSurface }]}>Home</Text>
+                <Text style={[styles.addressLabel, { color: colors.onSurface }]}>Delivery Address</Text>
                 <Text style={[styles.addressText, { color: colors.onSurfaceVariant }]}>
-                  {profile?.city ? `${profile.area || ''}, ${profile.city}` : '123 Rue Didouche Mourad, Algiers'}
+                  {address || 'Tap to enter your address'}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.outline} />
+              <Ionicons name="create-outline" size={18} color={colors.outline} />
             </TouchableOpacity>
+            {showAddressInput && (
+              <Input label="" placeholder="e.g. 123 Rue Didouche Mourad, Algiers"
+                value={address} onChangeText={setAddress} icon="location-outline" />
+            )}
           </>
         )}
 

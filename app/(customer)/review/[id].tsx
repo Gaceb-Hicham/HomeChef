@@ -53,11 +53,11 @@ export default function ReviewScreen() {
       chef_id: order?.chef_id || order?.chef?.id || '',
       post_id: order?.post_id || '',
       overall_rating: overall,
-      taste_rating: taste || undefined,
-      packaging_rating: packaging || undefined,
-      accuracy_rating: accuracy || undefined,
+      taste_rating: taste > 0 ? taste : null,
+      packaging_rating: packaging > 0 ? packaging : null,
+      accuracy_rating: accuracy > 0 ? accuracy : null,
       comment: comment.trim() || null,
-    });
+    } as any);
     setIsLoading(false);
 
     if (error) {

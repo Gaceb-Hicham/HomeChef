@@ -38,6 +38,7 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
+  verifyOtp: (email: string, token: string) => Promise<{ error: string | null }>;
   fetchProfile: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: string | null }>;
   demoLogin: (role: UserRole) => void;
@@ -115,6 +116,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { error: null };
     } catch (e: any) {
       return { error: e.message || 'An unexpected error occurred' };
+    }
+  },
+
+  verifyOtp: async (email, token) => {
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'signup',
+      });
+      if (error) return { error: error.message };
+      // Mark user as verified
+      const profile = get().profile;
+      if (profile) {
+        await supabase.from('users').update({ is_verified: true }).eq('id', profile.id);
+        set({ profile: { ...profile, is_verified: true } });
+      }
+      await get().fetchProfile();
+      return { error: null };
+    } catch (e: any) {
+      return { error: e.message || 'Verification failed' };
     }
   },
 

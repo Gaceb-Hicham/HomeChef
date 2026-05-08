@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuthStore } from '@/stores/authStore';
 import { Button, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -80,11 +81,22 @@ export default function OTPScreen() {
   const handleVerify = async (code: string) => {
     Keyboard.dismiss();
     setIsLoading(true);
-    // Simulate OTP verification
-    setTimeout(() => {
+    const email = params.email;
+    if (!email) {
+      // If no email provided, just navigate (demo flow)
       setIsLoading(false);
       router.replace('/(auth)/location');
-    }, 1500);
+      return;
+    }
+    const { error } = await useAuthStore.getState().verifyOtp(email, code);
+    setIsLoading(false);
+    if (error) {
+      Alert.alert('Verification Failed', error);
+      setOtp(Array(OTP_LENGTH).fill(''));
+      inputRefs.current[0]?.focus();
+    } else {
+      router.replace('/(auth)/location');
+    }
   };
 
   const handleResend = () => {
