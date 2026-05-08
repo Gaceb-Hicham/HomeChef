@@ -19,11 +19,11 @@ export default function RootLayout() {
   const { setSession, fetchProfile, setIsLoading } = useAuthStore();
 
   const [fontsLoaded] = useFonts({
-    'NotoSerif-Regular': require('../assets/fonts/SpaceMono-Regular.ttf'),
-    'NotoSerif-Bold': require('../assets/fonts/SpaceMono-Regular.ttf'),
-    'PlusJakartaSans-Regular': require('../assets/fonts/SpaceMono-Regular.ttf'),
-    'PlusJakartaSans-SemiBold': require('../assets/fonts/SpaceMono-Regular.ttf'),
-    'PlusJakartaSans-Bold': require('../assets/fonts/SpaceMono-Regular.ttf'),
+    'NotoSerif-Regular': require('@expo-google-fonts/noto-serif/400Regular/NotoSerif_400Regular.ttf'),
+    'NotoSerif-Bold': require('@expo-google-fonts/noto-serif/700Bold/NotoSerif_700Bold.ttf'),
+    'PlusJakartaSans-Regular': require('@expo-google-fonts/plus-jakarta-sans/400Regular/PlusJakartaSans_400Regular.ttf'),
+    'PlusJakartaSans-SemiBold': require('@expo-google-fonts/plus-jakarta-sans/600SemiBold/PlusJakartaSans_600SemiBold.ttf'),
+    'PlusJakartaSans-Bold': require('@expo-google-fonts/plus-jakarta-sans/700Bold/PlusJakartaSans_700Bold.ttf'),
   });
 
   useEffect(() => {

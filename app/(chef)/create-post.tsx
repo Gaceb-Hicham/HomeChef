@@ -59,7 +59,25 @@ export default function CreatePostScreen() {
 
     setIsLoading(true);
 
+    // Safety timeout — never stay loading for more than 15s
+    const timeout = setTimeout(() => {
+      setIsLoading(false);
+      infoAlert('Timeout', 'The operation took too long. Please try again.');
+    }, 15000);
+
     try {
+      // In demo mode, skip real API calls
+      const isDemoUser = useAuthStore.getState().isDemoMode || profile.id.startsWith('demo');
+
+      if (isDemoUser) {
+        clearTimeout(timeout);
+        setIsLoading(false);
+        crossAlert('Published! 🎉', 'Your daily special is now live. All followers have been notified.', [
+          { text: 'Done', onPress: () => router.back() },
+        ]);
+        return;
+      }
+
       // Upload photos if any
       let photoUrls: string[] = [];
       if (selectedPhotos.length > 0) {
@@ -90,6 +108,7 @@ export default function CreatePostScreen() {
         date: today,
       });
 
+      clearTimeout(timeout);
       setIsLoading(false);
 
       if (error) {
@@ -100,6 +119,7 @@ export default function CreatePostScreen() {
         ]);
       }
     } catch (e: any) {
+      clearTimeout(timeout);
       setIsLoading(false);
       infoAlert('Error', e.message || 'Failed to publish');
     }
