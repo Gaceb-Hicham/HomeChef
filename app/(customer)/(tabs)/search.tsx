@@ -1,23 +1,18 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { usePostsStore } from '@/stores/postsStore';
+import { chefApi } from '@/lib';
 import { ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
-const RECENT = ['Couscous', 'Baklava', 'Tajine', 'Chorba'];
-const TRENDING = [
-  { id: 't1', title: 'Homemade Bread', emoji: '🍞', count: '125 chefs' },
-  { id: 't2', title: 'Friday Couscous', emoji: '🍲', count: '98 chefs' },
-  { id: 't3', title: 'Ramadan Specials', emoji: '🌙', count: '87 chefs' },
-  { id: 't4', title: 'Birthday Cakes', emoji: '🎂', count: '64 chefs' },
-];
-
-const NEARBY_CHEFS = [
-  { id: 'n1', name: 'Sarah K.', distance: '0.5 km', rating: 4.8, specialty: 'Traditional', emoji: '👩‍🍳' },
-  { id: 'n2', name: 'Ahmed M.', distance: '1.2 km', rating: 4.6, specialty: 'Pastries', emoji: '👨‍🍳' },
-  { id: 'n3', name: 'Fatima Z.', distance: '2.1 km', rating: 4.9, specialty: 'Healthy', emoji: '👩‍🍳' },
+// Category suggestions (not fake data — these are search helpers)
+const CATEGORIES = [
+  { id: 't1', title: 'Homemade Bread', emoji: '🍞' },
+  { id: 't2', title: 'Couscous', emoji: '🍲' },
+  { id: 't3', title: 'Desserts', emoji: '🍰' },
+  { id: 't4', title: 'Grilled', emoji: '🍗' },
 ];
 
 export default function SearchScreen() {
@@ -25,12 +20,29 @@ export default function SearchScreen() {
   const { colors, shadows } = useTheme();
   const { searchResults, searchPosts, isLoading, clearSearch } = usePostsStore();
   const [query, setQuery] = useState('');
-  const [recentSearches, setRecentSearches] = useState(RECENT);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [nearbyChefs, setNearbyChefs] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadNearbyChefs();
+  }, []);
+
+  const loadNearbyChefs = async () => {
+    try {
+      const { data } = await chefApi.getNearbyChefs();
+      if (data) setNearbyChefs(data.slice(0, 5));
+    } catch (e) {}
+  };
 
   const handleSearch = useCallback((text: string) => {
     setQuery(text);
     if (text.trim().length >= 2) {
       searchPosts(text);
+      // Add to recent searches
+      setRecentSearches(prev => {
+        const filtered = prev.filter(s => s !== text);
+        return [text, ...filtered].slice(0, 6);
+      });
     } else {
       clearSearch();
     }
@@ -117,39 +129,44 @@ export default function SearchScreen() {
                 ))}
               </View>
 
-              {/* Trending */}
-              <Text style={[styles.sectionTitle, { color: colors.onBackground, marginTop: 20 }]}>🔥 Trending</Text>
-              {TRENDING.map((t) => (
+              {/* Popular categories */}
+              <Text style={[styles.sectionTitle, { color: colors.onBackground, marginTop: 20 }]}>🔥 Popular Categories</Text>
+              {CATEGORIES.map((t) => (
                 <TouchableOpacity key={t.id} onPress={() => handleRecentTap(t.title)}
                   style={[styles.trendRow, { borderBottomColor: colors.outlineVariant }]}>
                   <Text style={{ fontSize: 24 }}>{t.emoji}</Text>
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={[styles.trendTitle, { color: colors.onSurface }]}>{t.title}</Text>
-                    <Text style={{ color: colors.outline, fontSize: 12 }}>{t.count}</Text>
                   </View>
-                  <Ionicons name="trending-up" size={18} color={colors.primary} />
+                  <Ionicons name="search" size={18} color={colors.primary} />
                 </TouchableOpacity>
               ))}
 
               {/* Nearby chefs */}
-              <Text style={[styles.sectionTitle, { color: colors.onBackground, marginTop: 20 }]}>📍 Nearby Chefs</Text>
-              {NEARBY_CHEFS.map((c) => (
-                <TouchableOpacity key={c.id}
-                  onPress={() => router.push(`/(customer)/chef/${c.id}`)}
-                  style={[styles.chefRow, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
-                  <View style={[styles.chefAvatar, { backgroundColor: colors.surfaceContainerHigh }]}>
-                    <Text style={{ fontSize: 24 }}>{c.emoji}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.chefName, { color: colors.onSurface }]}>{c.name}</Text>
-                    <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{c.specialty} • {c.distance}</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                    <Ionicons name="star" size={14} color="#f59e0b" />
-                    <Text style={{ color: colors.onSurface, fontWeight: '600', fontSize: 13 }}>{c.rating}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+              {nearbyChefs.length > 0 && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: colors.onBackground, marginTop: 20 }]}>📍 Chefs Near You</Text>
+                  {nearbyChefs.map((c: any) => (
+                    <TouchableOpacity key={c.id || c.user_id}
+                      onPress={() => router.push(`/(customer)/chef/${c.user_id}`)}
+                      style={[styles.chefRow, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
+                      <View style={[styles.chefAvatar, { backgroundColor: colors.surfaceContainerHigh }]}>
+                        <Text style={{ fontSize: 24 }}>👨‍🍳</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.chefName, { color: colors.onSurface }]}>{c.kitchen_name}</Text>
+                        <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{(c.specialty_tags || []).join(' • ')}</Text>
+                      </View>
+                      {c.rating_average > 0 && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                          <Ionicons name="star" size={14} color="#f59e0b" />
+                          <Text style={{ color: colors.onSurface, fontWeight: '600', fontSize: 13 }}>{c.rating_average}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
               <View style={{ height: 24 }} />
             </View>
           }

@@ -9,17 +9,7 @@ import { useSavedStore } from '@/stores/appStores';
 import { ScreenWrapper, Button } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
-const MOCK = {
-  id: '1', title: 'Couscous Royal', description: 'Traditional Friday couscous with lamb, chickpeas, and seven vegetables. Served with spicy sauce on the side. Made with organic ingredients sourced locally.',
-  price: 850, remaining_quantity: 5, available_quantity: 15, order_deadline: '14:00',
-  chef: { id: 'aaaa', full_name: 'Sarah Kaddour', profile_photo_url: null, city: 'Algiers' },
-  chef_profile: { kitchen_name: "Mama Sarah's Kitchen", rating_average: 4.8, total_reviews: 156 },
-  reviews: [
-    { id: 'r1', overall_rating: 5, comment: 'Absolutely delicious! Best couscous in Algiers.', created_at: '2025-05-01', customer: { full_name: 'Riad M.', profile_photo_url: null } },
-    { id: 'r2', overall_rating: 4, comment: 'Very tasty, generous portions.', created_at: '2025-04-28', customer: { full_name: 'Nour S.', profile_photo_url: null } },
-  ],
-  delivery_available: true, pickup_available: true,
-};
+
 
 export default function OfferDetailScreen() {
   const router = useRouter();
@@ -36,11 +26,25 @@ export default function OfferDetailScreen() {
     if (id) fetchPostById(id);
   }, [id]);
 
-  const post = currentPost || MOCK;
-  const chef = (post as any).chef || MOCK.chef;
-  const chefProfile = (post as any).chef_profile || MOCK.chef_profile;
-  const reviews = (post as any).reviews || MOCK.reviews;
-  const maxQty = post.remaining_quantity || 5;
+  const post = currentPost;
+  const chef = (post as any)?.chef || { id: '', full_name: 'Chef', profile_photo_url: null };
+  const chefProfile = (post as any)?.chef_profile || { kitchen_name: 'Kitchen', rating_average: 0, total_reviews: 0 };
+  const reviews = (post as any)?.reviews || [];
+  const maxQty = post?.remaining_quantity || 1;
+
+  if (!post) {
+    return (
+      <ScreenWrapper>
+        <View style={{ alignItems: 'center', paddingTop: 80 }}>
+          <Text style={{ fontSize: 48, marginBottom: 16 }}>🔍</Text>
+          <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 8 }}>Loading dish details...</Text>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={{ color: '#8B6914', fontSize: 15, fontWeight: '600' }}>Go back</Text>
+          </TouchableOpacity>
+        </View>
+      </ScreenWrapper>
+    );
+  }
 
   useEffect(() => {
     if (id) setSaved(isSaved(id));
@@ -54,6 +58,7 @@ export default function OfferDetailScreen() {
   }, [profile?.id, id]);
 
   const handleAddToCart = () => {
+    // Add the item and then set quantity directly
     addItem({
       postId: id || post.id,
       chefId: chef.id,
@@ -63,6 +68,11 @@ export default function OfferDetailScreen() {
       price: post.price,
       maxQuantity: maxQty,
     });
+    // If qty > 1, update to match selected quantity
+    if (qty > 1) {
+      const { updateQuantity } = useCartStore.getState();
+      updateQuantity(id || post.id, qty);
+    }
     Alert.alert('Added to Cart 🛒', `${qty}× ${post.title} added.`, [
       { text: 'Continue Browsing', style: 'cancel' },
       { text: 'View Cart', onPress: () => router.push('/(customer)/(tabs)/cart') },
@@ -110,7 +120,7 @@ export default function OfferDetailScreen() {
           {/* Description */}
           <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>About</Text>
           <Text style={[styles.desc, { color: colors.onSurfaceVariant }]}>
-            {post.description || MOCK.description}
+            {post.description || 'No description available.'}
           </Text>
 
           {/* Tags */}

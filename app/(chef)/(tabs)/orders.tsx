@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Linking } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useOrdersStore } from '@/stores/ordersStore';
@@ -22,12 +22,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   cancelled: { bg: '#fee2e2', text: '#dc2626' },
 };
 
-const MOCK_ORDERS = [
-  { id: '1', customer: { full_name: 'Ali K.', phone: '0550123456' }, post: { title: 'Couscous Royal', photos: [] }, quantity: 2, total_price: 1700, order_status: 'received', delivery_type: 'delivery', created_at: new Date(Date.now() - 120000).toISOString() },
-  { id: '2', customer: { full_name: 'Nour S.', phone: '0551234567' }, post: { title: 'Baklava Box', photos: [] }, quantity: 1, total_price: 450, order_status: 'preparing', delivery_type: 'pickup', created_at: new Date(Date.now() - 900000).toISOString() },
-  { id: '3', customer: { full_name: 'Riad M.', phone: '0552345678' }, post: { title: 'Couscous Royal', photos: [] }, quantity: 3, total_price: 2550, order_status: 'ready', delivery_type: 'delivery', created_at: new Date(Date.now() - 1800000).toISOString() },
-  { id: '4', customer: { full_name: 'Yasmine A.', phone: '0553456789' }, post: { title: 'Tajine Zitoune', photos: [] }, quantity: 1, total_price: 700, order_status: 'delivered', delivery_type: 'pickup', created_at: new Date(Date.now() - 7200000).toISOString() },
-];
+
 
 export default function ChefOrdersScreen() {
   const { colors, shadows } = useTheme();
@@ -39,7 +34,7 @@ export default function ChefOrdersScreen() {
     if (profile?.id) fetchChefOrders(profile.id);
   }, [profile?.id]);
 
-  const orders = chefOrders.length > 0 ? chefOrders : MOCK_ORDERS;
+  const orders = chefOrders;
   const filtered = activeTab === 'All' ? orders : orders.filter((o: any) => o.order_status === activeTab);
 
   const handleAdvanceStatus = useCallback(async (orderId: string, currentStatus: string) => {
@@ -112,7 +107,8 @@ export default function ChefOrdersScreen() {
               <Text style={{ color: colors.onPrimary, fontWeight: '700', fontSize: 13 }}>{nextLabel}</Text>
             </TouchableOpacity>
             {item.customer?.phone && (
-              <TouchableOpacity style={[styles.actionBtnOutline, { borderColor: colors.outlineVariant }]}>
+              <TouchableOpacity style={[styles.actionBtnOutline, { borderColor: colors.outlineVariant }]}
+                onPress={() => Linking.openURL(`tel:${item.customer.phone}`)}>
                 <Ionicons name="call-outline" size={16} color={colors.primary} />
               </TouchableOpacity>
             )}

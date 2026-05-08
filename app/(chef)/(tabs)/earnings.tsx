@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useOrdersStore } from '@/stores/ordersStore';
@@ -19,8 +19,8 @@ export default function EarningsScreen() {
   }, [profile?.id]);
 
   const currentEarnings = period === 'day' ? dailyEarnings : period === 'week' ? weeklyEarnings : monthlyEarnings;
-  const total = currentEarnings?.total || (period === 'day' ? 8450 : period === 'week' ? 42300 : 168500);
-  const count = currentEarnings?.count || (period === 'day' ? 12 : period === 'week' ? 67 : 285);
+  const total = currentEarnings?.total || 0;
+  const count = currentEarnings?.count || 0;
 
   // Generate chart bars (7 bars for visual)
   const chartData = (() => {
@@ -33,10 +33,10 @@ export default function EarningsScreen() {
       return Object.entries(groups).map(([label, value]) => ({ label, value }));
     }
     return [
-      { label: 'Mon', value: 5200 }, { label: 'Tue', value: 7800 },
-      { label: 'Wed', value: 4300 }, { label: 'Thu', value: 9100 },
-      { label: 'Fri', value: 8450 }, { label: 'Sat', value: 6200 },
-      { label: 'Sun', value: 1250 },
+      { label: 'Mon', value: 0 }, { label: 'Tue', value: 0 },
+      { label: 'Wed', value: 0 }, { label: 'Thu', value: 0 },
+      { label: 'Fri', value: 0 }, { label: 'Sat', value: 0 },
+      { label: 'Sun', value: 0 },
     ];
   })();
 
@@ -108,7 +108,8 @@ export default function EarningsScreen() {
         </View>
 
         {/* Withdrawal CTA */}
-        <TouchableOpacity style={[styles.withdrawBtn, { borderColor: colors.primary }]}>
+        <TouchableOpacity style={[styles.withdrawBtn, { borderColor: colors.primary }]}
+          onPress={() => Alert.alert('Request Payout', total > 0 ? `You have ${total.toLocaleString()} DA available for payout. This feature will be available soon.` : 'No earnings available for payout yet.')}>
           <Ionicons name="download-outline" size={20} color={colors.primary} />
           <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 15, marginLeft: 8 }}>Request Payout</Text>
         </TouchableOpacity>

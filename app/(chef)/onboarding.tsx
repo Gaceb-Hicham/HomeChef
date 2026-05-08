@@ -1,26 +1,40 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuthStore } from '@/stores/authStore';
+import { useChefProfileStore } from '@/stores/appStores';
 import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ChefOnboardingScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
+  const profile = useAuthStore((s) => s.profile);
+  const { createProfile } = useChefProfileStore();
   const [kitchenName, setKitchenName] = useState('');
   const [bio, setBio] = useState('');
   const [specialties, setSpecialties] = useState('');
   const [radius, setRadius] = useState('5');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSetup = () => {
-    if (!kitchenName.trim()) return;
+  const handleSetup = async () => {
+    if (!kitchenName.trim()) { Alert.alert('Required', 'Please enter your kitchen name.'); return; }
+    if (!profile?.id) { Alert.alert('Error', 'Please log in first.'); return; }
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    const { error } = await createProfile({
+      user_id: profile.id,
+      kitchen_name: kitchenName.trim(),
+      bio: bio.trim() || null,
+      specialty_tags: specialties.split(',').map(s => s.trim()).filter(Boolean),
+      delivery_radius_km: parseInt(radius) || 5,
+    });
+    setIsLoading(false);
+    if (error) {
+      Alert.alert('Error', error);
+    } else {
       router.replace('/(chef)/(tabs)/dashboard');
-    }, 1500);
+    }
   };
 
   return (
@@ -35,9 +49,10 @@ export default function ChefOnboardingScreen() {
         </View>
 
         {/* Cover photo */}
-        <TouchableOpacity style={[styles.coverArea, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}>
+        <TouchableOpacity style={[styles.coverArea, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}
+          onPress={() => Alert.alert('Cover Photo', 'Photo upload is available on mobile devices. You can add a cover photo later from Kitchen Settings.')}>
           <Ionicons name="image-outline" size={28} color={colors.outline} />
-          <Text style={{ color: colors.outline, marginTop: 6, fontSize: 13 }}>Add Cover Photo</Text>
+          <Text style={{ color: colors.outline, marginTop: 6, fontSize: 13 }}>Add Cover Photo (optional)</Text>
         </TouchableOpacity>
 
         <Input label="Kitchen Name *" placeholder="e.g. Mama's Kitchen" value={kitchenName}

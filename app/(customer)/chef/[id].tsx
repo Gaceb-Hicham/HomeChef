@@ -1,30 +1,90 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuthStore } from '@/stores/authStore';
+import { chefApi, postsApi, followersApi } from '@/lib';
 import { ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
-const CHEF = {
-  id: 'c1', name: 'Sarah K.', kitchen: "Mama's Kitchen", bio: 'Passionate about traditional Algerian cuisine. Every dish is made with love and the finest ingredients.',
-  avatar: '👩‍🍳', rating: 4.9, reviews: 47, orders: 423, followers: 156, isOpen: true,
-  specialties: ['Couscous', 'Tajine', 'Chorba', 'Baklava'],
-};
-
-const ARCHIVE = [
-  { id: '1', title: 'Couscous Royal', emoji: '🍲', price: 850, date: 'Today' },
-  { id: '2', title: 'Baklava Box', emoji: '🍰', price: 450, date: 'Today' },
-  { id: '3', title: 'Chorba Frik', emoji: '🍜', price: 400, date: 'Yesterday' },
-  { id: '4', title: 'Tajine Zitoune', emoji: '🥘', price: 700, date: '28 Apr' },
-  { id: '5', title: 'Makrout', emoji: '🍯', price: 350, date: '27 Apr' },
-  { id: '6', title: 'Bourek', emoji: '🥟', price: 300, date: '26 Apr' },
-];
-
 export default function ChefProfileScreen() {
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { colors, shadows } = useTheme();
+  const profile = useAuthStore((s) => s.profile);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [chef, setChef] = useState<any>(null);
+  const [archive, setArchive] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id) return;
+    loadChef();
+  }, [id]);
+
+  const loadChef = async () => {
+    setLoading(true);
+    try {
+      const { data: chefData } = await chefApi.getChefProfile(id!);
+      if (chefData) setChef(chefData);
+
+      const { data: posts } = await postsApi.getChefArchive(id!, 20);
+      if (posts) setArchive(posts);
+
+      // Load follow state & count
+      const count = await followersApi.getFollowerCount(id!);
+      setFollowerCount(count);
+      if (profile?.id) {
+        const following = await followersApi.isFollowing(profile.id, id!);
+        setIsFollowing(following);
+      }
+    } catch (e) {
+      console.log('Error loading chef:', e);
+    }
+    setLoading(false);
+  };
+
+  const handleFollowToggle = async () => {
+    if (!profile?.id || !id) return;
+    const { following } = await followersApi.toggleFollow(profile.id, id);
+    setIsFollowing(following);
+    setFollowerCount(prev => following ? prev + 1 : Math.max(0, prev - 1));
+  };
+
+  if (loading) {
+    return (
+      <ScreenWrapper>
+        <View style={{ alignItems: 'center', paddingTop: 100 }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ marginTop: 12, color: colors.onSurfaceVariant }}>Loading chef profile...</Text>
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
+  if (!chef) {
+    return (
+      <ScreenWrapper>
+        <View style={{ alignItems: 'center', paddingTop: 80 }}>
+          <Text style={{ fontSize: 48, marginBottom: 16 }}>👨‍🍳</Text>
+          <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 8, color: colors.onSurface }}>Chef not found</Text>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={{ color: colors.primary, fontSize: 15, fontWeight: '600' }}>Go back</Text>
+          </TouchableOpacity>
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
+  const chefProfile = chef;
+  const kitchenName = chefProfile.kitchen_name || 'Kitchen';
+  const chefName = chefProfile.user?.full_name || kitchenName;
+  const bio = chefProfile.bio || 'Home chef on HomeChef.';
+  const specialties = chefProfile.specialty_tags || [];
+  const rating = chefProfile.rating_average || 0;
+  const totalOrders = chefProfile.total_orders_fulfilled || 0;
+  const followers = followerCount;
 
   return (
     <ScreenWrapper padded={false} safeArea={false}>
@@ -39,14 +99,14 @@ export default function ChefProfileScreen() {
         {/* Profile card */}
         <View style={[styles.profileCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.md }]}>
           <View style={[styles.avatar, { backgroundColor: colors.primaryFixed }]}>
-            <Text style={{ fontSize: 44 }}>{CHEF.avatar}</Text>
+            <Text style={{ fontSize: 44 }}>👨‍🍳</Text>
           </View>
-          <Text style={[styles.name, { color: colors.onBackground }]}>{CHEF.name}</Text>
-          <Text style={[styles.kitchen, { color: colors.primary }]}>{CHEF.kitchen}</Text>
+          <Text style={[styles.name, { color: colors.onBackground }]}>{chefName}</Text>
+          <Text style={[styles.kitchen, { color: colors.primary }]}>{kitchenName}</Text>
 
           {/* Stats */}
           <View style={styles.statRow}>
-            {[{ n: CHEF.orders.toString(), l: 'Orders' }, { n: CHEF.rating.toString(), l: 'Rating' }, { n: CHEF.followers.toString(), l: 'Followers' }].map((s) => (
+            {[{ n: totalOrders.toString(), l: 'Orders' }, { n: rating.toString(), l: 'Rating' }, { n: followers.toString(), l: 'Followers' }].map((s) => (
               <View key={s.l} style={styles.stat}>
                 <Text style={[styles.statN, { color: colors.primary }]}>{s.n}</Text>
                 <Text style={[styles.statL, { color: colors.onSurfaceVariant }]}>{s.l}</Text>
@@ -55,7 +115,7 @@ export default function ChefProfileScreen() {
           </View>
 
           {/* Follow button */}
-          <TouchableOpacity onPress={() => setIsFollowing(!isFollowing)}
+          <TouchableOpacity onPress={handleFollowToggle}
             style={[styles.followBtn, { backgroundColor: isFollowing ? colors.surfaceContainerLow : colors.primary, borderColor: isFollowing ? colors.outlineVariant : colors.primary }]}>
             <Ionicons name={isFollowing ? 'checkmark' : 'add'} size={18} color={isFollowing ? colors.onSurface : colors.onPrimary} />
             <Text style={{ color: isFollowing ? colors.onSurface : colors.onPrimary, fontWeight: '600', fontSize: 14 }}>
@@ -63,34 +123,43 @@ export default function ChefProfileScreen() {
             </Text>
           </TouchableOpacity>
 
-          <Text style={[styles.bio, { color: colors.onSurfaceVariant }]}>{CHEF.bio}</Text>
+          <Text style={[styles.bio, { color: colors.onSurfaceVariant }]}>{bio}</Text>
 
           {/* Specialties */}
-          <View style={styles.tagsRow}>
-            {CHEF.specialties.map((s) => (
-              <View key={s} style={[styles.tag, { backgroundColor: colors.surfaceContainerLow }]}>
-                <Text style={{ color: colors.onSurfaceVariant, fontSize: 12, fontWeight: '500' }}>{s}</Text>
-              </View>
-            ))}
-          </View>
+          {specialties.length > 0 && (
+            <View style={styles.tagsRow}>
+              {specialties.map((s: string) => (
+                <View key={s} style={[styles.tag, { backgroundColor: colors.surfaceContainerLow }]}>
+                  <Text style={{ color: colors.onSurfaceVariant, fontSize: 12, fontWeight: '500' }}>{s}</Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Archive */}
         <View style={{ padding: 24 }}>
           <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>Menu Archive</Text>
-          <View style={styles.grid}>
-            {ARCHIVE.map((item) => (
-              <TouchableOpacity key={item.id} style={[styles.gridCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}
-                onPress={() => router.push(`/(customer)/offer/${item.id}`)}>
-                <View style={[styles.gridImg, { backgroundColor: colors.surfaceContainerHigh }]}>
-                  <Text style={{ fontSize: 32 }}>{item.emoji}</Text>
-                </View>
-                <Text style={[styles.gridTitle, { color: colors.onSurface }]} numberOfLines={1}>{item.title}</Text>
-                <Text style={[styles.gridPrice, { color: colors.primary }]}>{item.price} DA</Text>
-                <Text style={[styles.gridDate, { color: colors.outline }]}>{item.date}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {archive.length > 0 ? (
+            <View style={styles.grid}>
+              {archive.map((item: any) => (
+                <TouchableOpacity key={item.id} style={[styles.gridCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}
+                  onPress={() => router.push(`/(customer)/offer/${item.id}`)}>
+                  <View style={[styles.gridImg, { backgroundColor: colors.surfaceContainerHigh }]}>
+                    <Text style={{ fontSize: 32 }}>🍽️</Text>
+                  </View>
+                  <Text style={[styles.gridTitle, { color: colors.onSurface }]} numberOfLines={1}>{item.title}</Text>
+                  <Text style={[styles.gridPrice, { color: colors.primary }]}>{item.price} DA</Text>
+                  <Text style={[styles.gridDate, { color: colors.outline }]}>{new Date(item.created_at).toLocaleDateString()}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : (
+            <View style={{ alignItems: 'center', paddingVertical: 30 }}>
+              <Text style={{ fontSize: 32, marginBottom: 8 }}>📋</Text>
+              <Text style={{ color: colors.onSurfaceVariant, fontSize: 14 }}>No dishes posted yet</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </ScreenWrapper>

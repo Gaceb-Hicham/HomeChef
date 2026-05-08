@@ -16,11 +16,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; icon: string }> 
   cancelled: { bg: '#fee2e2', text: '#dc2626', icon: 'close-circle' },
 };
 
-const MOCK_ORDERS = [
-  { id: '1', post: { title: 'Couscous Royal', photos: [], price: 850 }, chef: { full_name: 'Sarah K.', profile_photo_url: null }, quantity: 2, total_price: 1700, order_status: 'preparing', delivery_type: 'delivery', created_at: new Date(Date.now() - 1800000).toISOString() },
-  { id: '2', post: { title: 'Baklava Box', photos: [], price: 450 }, chef: { full_name: 'Ahmed M.', profile_photo_url: null }, quantity: 1, total_price: 450, order_status: 'delivered', delivery_type: 'pickup', created_at: new Date(Date.now() - 86400000).toISOString() },
-  { id: '3', post: { title: 'Fresh Baguettes', photos: [], price: 150 }, chef: { full_name: 'Fatima Z.', profile_photo_url: null }, quantity: 3, total_price: 450, order_status: 'delivered', delivery_type: 'delivery', created_at: new Date(Date.now() - 172800000).toISOString() },
-];
+
 
 export default function OrdersScreen() {
   const router = useRouter();
@@ -33,9 +29,9 @@ export default function OrdersScreen() {
     if (profile?.id) fetchCustomerOrders(profile.id);
   }, [profile?.id]);
 
-  // Use real or mock data
-  const active = activeOrders.length > 0 ? activeOrders : MOCK_ORDERS.filter((o) => !['delivered', 'cancelled'].includes(o.order_status));
-  const past = pastOrders.length > 0 ? pastOrders : MOCK_ORDERS.filter((o) => ['delivered', 'cancelled'].includes(o.order_status));
+  // Use real data only
+  const active = activeOrders;
+  const past = pastOrders;
   const data = tab === 'active' ? active : past;
 
   const getTimeLabel = (dateStr: string) => {

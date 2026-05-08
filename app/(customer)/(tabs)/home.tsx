@@ -16,22 +16,6 @@ const { width } = Dimensions.get('window');
 
 const CATEGORIES = ['All', '🍲 Meals', '🍰 Desserts', '🥗 Salads', '🍞 Bakery', '🥤 Drinks'];
 
-// Fallback mock data when Supabase isn't configured
-const MOCK_CHEFS = [
-  { id: '1', name: 'Sarah K.', avatar: '👩‍🍳', hasStory: true },
-  { id: '2', name: 'Ahmed M.', avatar: '👨‍🍳', hasStory: true },
-  { id: '3', name: 'Fatima Z.', avatar: '👩‍🍳', hasStory: true },
-  { id: '4', name: 'Karim B.', avatar: '👨‍🍳', hasStory: false },
-];
-
-const MOCK_POSTS = [
-  { id: '1', title: 'Couscous Royal', chef_name: 'Sarah K.', chefAvatar: '👩‍🍳', price: 850, remaining_quantity: 5, order_deadline: '14:00', emoji: '🍲', category: 'Meals' },
-  { id: '2', title: 'Baklava Box', chef_name: 'Ahmed M.', chefAvatar: '👨‍🍳', price: 450, remaining_quantity: 12, order_deadline: '16:00', emoji: '🍰', category: 'Desserts' },
-  { id: '3', title: 'Fresh Baguettes', chef_name: 'Fatima Z.', chefAvatar: '👩‍🍳', price: 150, remaining_quantity: 20, order_deadline: '11:00', emoji: '🍞', category: 'Bakery' },
-  { id: '4', title: 'Grilled Chicken Plate', chef_name: 'Karim B.', chefAvatar: '👨‍🍳', price: 750, remaining_quantity: 3, order_deadline: '13:30', emoji: '🍗', category: 'Meals' },
-  { id: '5', title: 'Mille-feuille', chef_name: 'Sarah K.', chefAvatar: '👩‍🍳', price: 350, remaining_quantity: 8, order_deadline: '15:00', emoji: '🧁', category: 'Desserts' },
-];
-
 export default function HomeScreen() {
   const router = useRouter();
   const { colors, shadows, spacing } = useTheme();
@@ -60,8 +44,8 @@ export default function HomeScreen() {
     refreshFeed(profile?.city || undefined);
   }, [profile?.city]);
 
-  // Use real data if available, otherwise mock
-  const posts = feed.length > 0 ? feed : MOCK_POSTS;
+  // Use real data only
+  const posts = feed;
 
   const filteredPosts = activeCategory === 'All'
     ? posts
@@ -77,9 +61,18 @@ export default function HomeScreen() {
     return 'Good evening';
   };
 
-  const renderStory = ({ item }: { item: typeof MOCK_CHEFS[0] }) => (
-    <TouchableOpacity style={styles.storyItem}>
-      <View style={[styles.storyRing, { borderColor: item.hasStory ? colors.primary : colors.outlineVariant }]}>
+  // Extract unique chefs from feed for story row
+  const feedChefs = posts.reduce((acc: any[], p: any) => {
+    const chef = p.chef;
+    if (chef && !acc.find((c: any) => c.id === chef.id)) {
+      acc.push({ id: chef.id, name: chef.full_name || 'Chef', avatar: '👨‍🍳', hasStory: true });
+    }
+    return acc;
+  }, []);
+
+  const renderStory = ({ item }: { item: any }) => (
+    <TouchableOpacity style={styles.storyItem} onPress={() => router.push(`/(customer)/chef/${item.id}`)}>
+      <View style={[styles.storyRing, { borderColor: colors.primary }]}>
         <View style={[styles.storyAvatar, { backgroundColor: colors.surfaceContainerHigh }]}>
           <Text style={{ fontSize: 26 }}>{item.avatar}</Text>
         </View>
@@ -133,7 +126,8 @@ export default function HomeScreen() {
             <Text style={[styles.price, { color: colors.primary }]}>
               {item.price} <Text style={styles.currency}>DA</Text>
             </Text>
-            <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.primary }]}>
+            <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.primary }]}
+              onPress={() => router.push(`/(customer)/offer/${item.id}`)}>
               <Ionicons name="add" size={20} color={colors.onPrimary} />
             </TouchableOpacity>
           </View>
@@ -173,10 +167,12 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Stories row */}
-        <FlatList data={MOCK_CHEFS} renderItem={renderStory} keyExtractor={(i) => i.id}
-          horizontal showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: 16, marginBottom: 20 }} />
+        {/* Stories row — from real feed chefs */}
+        {feedChefs.length > 0 && (
+          <FlatList data={feedChefs} renderItem={renderStory} keyExtractor={(i: any) => i.id}
+            horizontal showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: 16, marginBottom: 20 }} />
+        )}
 
         {/* Categories */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
@@ -197,15 +193,27 @@ export default function HomeScreen() {
         {/* Section title */}
         <View style={[styles.sectionHeader, { paddingHorizontal: spacing.xl }]}>
           <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>Today's Specials</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/search')}>
             <Text style={[styles.seeAll, { color: colors.primary }]}>See all</Text>
           </TouchableOpacity>
         </View>
 
         {/* Posts */}
-        <FlatList data={filteredPosts} renderItem={renderPostCard} keyExtractor={(i: any) => i.id}
-          scrollEnabled={false}
-          contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: 16, paddingBottom: 24 }} />
+        {filteredPosts.length > 0 ? (
+          <FlatList data={filteredPosts} renderItem={renderPostCard} keyExtractor={(i: any) => i.id}
+            scrollEnabled={false}
+            contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: 16, paddingBottom: 24 }} />
+        ) : (
+          <View style={{ alignItems: 'center', paddingVertical: 60, paddingHorizontal: spacing.xl }}>
+            <Text style={{ fontSize: 48, marginBottom: 16 }}>🍽️</Text>
+            <Text style={{ fontFamily: 'NotoSerif-Bold', fontSize: 20, fontWeight: '700', color: colors.onSurface, marginBottom: 8, textAlign: 'center' }}>
+              No dishes available yet
+            </Text>
+            <Text style={{ fontFamily: 'PlusJakartaSans-Regular', fontSize: 14, color: colors.onSurfaceVariant, textAlign: 'center', lineHeight: 22 }}>
+              Home chefs haven't posted today's specials yet.{"\n"}Pull down to refresh or check back soon!
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </ScreenWrapper>
   );

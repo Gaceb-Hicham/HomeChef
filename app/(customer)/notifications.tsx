@@ -16,12 +16,7 @@ const NOTIF_ICONS: Record<string, { icon: string; bg: string; color: string }> =
   system: { icon: 'notifications', bg: '#ede9fe', color: '#7c3aed' },
 };
 
-const MOCK_NOTIFS = [
-  { id: '1', type: 'order', title: 'Order Ready! 🎉', body: 'Your Couscous Royal from Sarah K. is ready for pickup.', is_read: false, created_at: new Date(Date.now() - 300000).toISOString() },
-  { id: '2', type: 'review', title: 'New Review', body: 'Ahmed M. left you a 5-star review.', is_read: false, created_at: new Date(Date.now() - 1800000).toISOString() },
-  { id: '3', type: 'promo', title: '20% Off Weekend Special', body: 'Use code WEEKEND20 for 20% off your next order!', is_read: true, created_at: new Date(Date.now() - 86400000).toISOString() },
-  { id: '4', type: 'follow', title: 'New Follower', body: 'Nour S. started following your kitchen.', is_read: true, created_at: new Date(Date.now() - 172800000).toISOString() },
-];
+
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -37,7 +32,7 @@ export default function NotificationsScreen() {
   // Subscribe to realtime notifications
   useRealtimeNotifications(profile?.id || '', addNotification);
 
-  const notifs = notifications.length > 0 ? notifications : MOCK_NOTIFS;
+  const notifs = notifications;
 
   const getTimeAgo = (dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime();

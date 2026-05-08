@@ -9,12 +9,7 @@ import { useRealtimeChefOrders } from '@/hooks/useRealtime';
 import { Button, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
-// Fallback mock data
-const MOCK_ORDERS = [
-  { id: '1', customer: 'Ali K.', dish: 'Couscous Royal', qty: 2, order_status: 'received', time: '2 min ago' },
-  { id: '2', customer: 'Nour S.', dish: 'Baklava Box', qty: 1, order_status: 'preparing', time: '15 min ago' },
-  { id: '3', customer: 'Riad M.', dish: 'Couscous Royal', qty: 3, order_status: 'ready', time: '30 min ago' },
-];
+
 
 export default function DashboardScreen() {
   const { colors, shadows } = useTheme();
@@ -55,23 +50,21 @@ export default function DashboardScreen() {
   );
 
   const stats = [
-    { label: "Today's Orders", value: todayOrders.length > 0 ? todayOrders.length.toString() : '12', icon: 'receipt', color: '#0369a1', bg: '#e0f2fe' },
-    { label: "Today's Revenue", value: dailyEarnings ? `${dailyEarnings.total.toLocaleString()} DA` : '8,450 DA', icon: 'wallet', color: '#15803d', bg: '#dcfce7' },
-    { label: 'Pending', value: pendingOrders.length > 0 ? pendingOrders.length.toString() : '3', icon: 'time', color: '#b45309', bg: '#fef3c7' },
-    { label: 'Avg Rating', value: chefProfile?.rating_average ? `${chefProfile.rating_average} ⭐` : '4.8 ⭐', icon: 'star', color: '#7c3aed', bg: '#ede9fe' },
+    { label: "Today's Orders", value: todayOrders.length.toString(), icon: 'receipt', color: '#0369a1', bg: '#e0f2fe' },
+    { label: "Today's Revenue", value: dailyEarnings ? `${dailyEarnings.total.toLocaleString()} DA` : '0 DA', icon: 'wallet', color: '#15803d', bg: '#dcfce7' },
+    { label: 'Pending', value: pendingOrders.length.toString(), icon: 'time', color: '#b45309', bg: '#fef3c7' },
+    { label: 'Avg Rating', value: chefProfile?.rating_average ? `${chefProfile.rating_average} ⭐` : '- ⭐', icon: 'star', color: '#7c3aed', bg: '#ede9fe' },
   ];
 
-  // Use real orders or fallback
-  const recentOrders = chefOrders.length > 0
-    ? chefOrders.slice(0, 5).map((o) => ({
-        id: o.id,
-        customer: o.customer?.full_name || 'Customer',
-        dish: o.post?.title || 'Order',
-        qty: o.quantity,
-        order_status: o.order_status,
-        time: getTimeAgo(o.created_at),
-      }))
-    : MOCK_ORDERS;
+  // Use real orders only
+  const recentOrders = chefOrders.slice(0, 5).map((o) => ({
+      id: o.id,
+      customer: o.customer?.full_name || 'Customer',
+      dish: o.post?.title || 'Order',
+      qty: o.quantity,
+      order_status: o.order_status,
+      time: getTimeAgo(o.created_at),
+    }));
 
   return (
     <ScreenWrapper>
@@ -84,7 +77,8 @@ export default function DashboardScreen() {
               {profile?.full_name || 'Chef'} 👨‍🍳
             </Text>
           </View>
-          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.surfaceContainerLow }]}>
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.surfaceContainerLow }]}
+            onPress={() => router.push('/(customer)/notifications')}>
             <Ionicons name="notifications-outline" size={22} color={colors.onSurface} />
           </TouchableOpacity>
         </View>

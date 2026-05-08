@@ -1,19 +1,33 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuthStore } from '@/stores/authStore';
+import { reviewsApi, ordersApi } from '@/lib';
 import { Button, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ReviewScreen() {
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { colors } = useTheme();
+  const profile = useAuthStore((s) => s.profile);
   const [overall, setOverall] = useState(0);
   const [taste, setTaste] = useState(0);
   const [packaging, setPackaging] = useState(0);
   const [accuracy, setAccuracy] = useState(0);
+  const [comment, setComment] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [order, setOrder] = useState<any>(null);
+
+  useEffect(() => {
+    if (id) loadOrder();
+  }, [id]);
+
+  const loadOrder = async () => {
+    const { data } = await ordersApi.getOrderById(id!);
+    if (data) setOrder(data);
+  };
 
   const StarRow = ({ label, value, onChange }: { label: string; value: number; onChange: (n: number) => void }) => (
     <View style={styles.starSection}>
@@ -28,15 +42,31 @@ export default function ReviewScreen() {
     </View>
   );
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (overall === 0) { Alert.alert('Rating Required', 'Please give an overall rating.'); return; }
+    if (!profile?.id || !id) return;
+
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    const { data, error } = await reviewsApi.createReview({
+      order_id: id,
+      customer_id: profile.id,
+      chef_id: order?.chef_id || order?.chef?.id || '',
+      post_id: order?.post_id || '',
+      overall_rating: overall,
+      taste_rating: taste || undefined,
+      packaging_rating: packaging || undefined,
+      accuracy_rating: accuracy || undefined,
+      comment: comment.trim() || null,
+    });
+    setIsLoading(false);
+
+    if (error) {
+      Alert.alert('Error', error);
+    } else {
       Alert.alert('Thank You! 🎉', 'Your review has been submitted.', [
         { text: 'Done', onPress: () => router.back() },
       ]);
-    }, 1500);
+    }
   };
 
   return (
@@ -51,14 +81,27 @@ export default function ReviewScreen() {
 
       <View style={styles.dishInfo}>
         <Text style={{ fontSize: 44 }}>🍲</Text>
-        <Text style={[styles.dishName, { color: colors.onSurface }]}>Couscous Royal</Text>
-        <Text style={[styles.chefName, { color: colors.onSurfaceVariant }]}>by Sarah K.</Text>
+        <Text style={[styles.dishName, { color: colors.onSurface }]}>{order?.post?.title || 'Your Order'}</Text>
+        <Text style={[styles.chefName, { color: colors.onSurfaceVariant }]}>
+          by {order?.chef?.full_name || 'Chef'}
+        </Text>
       </View>
 
       <StarRow label="Overall Rating *" value={overall} onChange={setOverall} />
       <StarRow label="Taste" value={taste} onChange={setTaste} />
       <StarRow label="Packaging" value={packaging} onChange={setPackaging} />
       <StarRow label="Accuracy" value={accuracy} onChange={setAccuracy} />
+
+      <Text style={[styles.starLabel, { color: colors.onSurfaceVariant, marginTop: 4 }]}>Comment (optional)</Text>
+      <TextInput
+        value={comment}
+        onChangeText={setComment}
+        placeholder="Share your experience..."
+        placeholderTextColor={colors.outline}
+        multiline
+        numberOfLines={3}
+        style={[styles.commentInput, { color: colors.onSurface, backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}
+      />
 
       <View style={{ flex: 1 }} />
       <Button title="Submit Review" onPress={handleSubmit} loading={isLoading} size="lg" disabled={overall === 0} />
@@ -76,4 +119,5 @@ const styles = StyleSheet.create({
   starSection: { marginBottom: 20 },
   starLabel: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 14, fontWeight: '600', marginBottom: 8 },
   stars: { flexDirection: 'row', gap: 8 },
+  commentInput: { borderWidth: 1, borderRadius: 12, padding: 14, fontSize: 14, fontFamily: 'PlusJakartaSans-Regular', minHeight: 80, textAlignVertical: 'top', marginBottom: 16 },
 });

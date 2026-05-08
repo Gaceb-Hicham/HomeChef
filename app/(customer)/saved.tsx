@@ -7,17 +7,6 @@ import { useSavedStore } from '@/stores/appStores';
 import { ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
-const MOCK_DISHES = [
-  { id: 'd1', title: 'Couscous Royal', chef: 'Sarah K.', price: 850, emoji: '🍲' },
-  { id: 'd2', title: 'Baklava Box', chef: 'Ahmed M.', price: 450, emoji: '🍰' },
-  { id: 'd3', title: 'Tajine Zitoune', chef: 'Fatima Z.', price: 700, emoji: '🥘' },
-];
-
-const MOCK_CHEFS = [
-  { id: 'c1', name: 'Sarah K.', specialty: 'Traditional Algerian', rating: 4.8, emoji: '👩‍🍳' },
-  { id: 'c2', name: 'Ahmed M.', specialty: 'Pastries & Desserts', rating: 4.6, emoji: '👨‍🍳' },
-];
-
 export default function SavedScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
@@ -29,8 +18,8 @@ export default function SavedScreen() {
     if (profile?.id) fetchSaved(profile.id);
   }, [profile?.id]);
 
-  const dishes = savedDishes.length > 0 ? savedDishes : MOCK_DISHES;
-  const chefs = savedChefs.length > 0 ? savedChefs : MOCK_CHEFS;
+  const dishes = savedDishes;
+  const chefs = savedChefs;
 
   return (
     <ScreenWrapper padded={false}>

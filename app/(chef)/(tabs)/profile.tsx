@@ -1,25 +1,84 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
-import { ScreenWrapper } from '@/components/ui';
+import { useChefProfileStore } from '@/stores/appStores';
+import { useLanguage } from '@/hooks/useLanguage';
+import { chefApi, followersApi } from '@/lib';
+import { supabase } from '@/lib/supabase';
+import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
-
-const MENU = [
-  { icon: 'storefront-outline', label: 'Kitchen Settings' },
-  { icon: 'images-outline', label: 'Kitchen Archive', route: '/(chef)/archive' },
-  { icon: 'location-outline', label: 'Delivery Settings' },
-  { icon: 'notifications-outline', label: 'Notifications' },
-  { icon: 'card-outline', label: 'Bank Account' },
-  { icon: 'language-outline', label: 'Language' },
-  { icon: 'help-circle-outline', label: 'Help & Support' },
-];
 
 export default function ChefProfileScreen() {
   const { colors, shadows } = useTheme();
   const router = useRouter();
   const { profile, signOut } = useAuthStore();
+  const { chefProfile, fetchProfile } = useChefProfileStore();
+  const { t, currentLanguage, changeLanguage } = useLanguage();
+
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showLangModal, setShowLangModal] = useState(false);
+  const [editKitchen, setEditKitchen] = useState('');
+  const [editBio, setEditBio] = useState('');
+  const [editTags, setEditTags] = useState('');
+  const [editRadius, setEditRadius] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+
+  useEffect(() => {
+    if (profile?.id) {
+      fetchProfile(profile.id);
+      loadFollowers();
+    }
+  }, [profile?.id]);
+
+  const loadFollowers = async () => {
+    if (profile?.id) {
+      const count = await followersApi.getFollowerCount(profile.id);
+      setFollowerCount(count);
+    }
+  };
+
+  const openEdit = () => {
+    setEditKitchen(chefProfile?.kitchen_name || '');
+    setEditBio(chefProfile?.bio || '');
+    setEditTags((chefProfile?.specialty_tags || []).join(', '));
+    setEditRadius(chefProfile?.delivery_radius_km?.toString() || '5');
+    setShowEditModal(true);
+  };
+
+  const handleSave = async () => {
+    if (!profile?.id) return;
+    setIsSaving(true);
+    const { error } = await chefApi.updateChefProfile(profile.id, {
+      kitchen_name: editKitchen.trim(),
+      bio: editBio.trim() || null,
+      specialty_tags: editTags.split(',').map(t => t.trim()).filter(Boolean),
+      delivery_radius_km: parseInt(editRadius) || 5,
+    });
+    setIsSaving(false);
+    if (error) {
+      Alert.alert('Error', error);
+    } else {
+      fetchProfile(profile.id);
+      setShowEditModal(false);
+      Alert.alert('Success', 'Kitchen settings updated!');
+    }
+  };
+
+  const stats = [
+    { n: (chefProfile?.total_orders_fulfilled || 0).toString(), l: 'Orders' },
+    { n: chefProfile?.rating_average ? chefProfile.rating_average.toString() : '-', l: 'Rating' },
+    { n: followerCount.toString(), l: 'Followers' },
+  ];
+
+  const MENU = [
+    { icon: 'storefront-outline', label: 'Kitchen Settings', action: openEdit },
+    { icon: 'images-outline', label: 'Kitchen Archive', route: '/(chef)/archive' },
+    { icon: 'language-outline', label: `Language — ${currentLanguage === 'en' ? 'English' : 'العربية'}`, action: () => setShowLangModal(true) },
+    { icon: 'information-circle-outline', label: 'About HomeChef', action: () => Alert.alert('HomeChef', 'A marketplace connecting home cooks with local customers.\n\nVersion 1.0.0') },
+  ];
 
   return (
     <ScreenWrapper>
@@ -29,9 +88,9 @@ export default function ChefProfileScreen() {
             <Text style={{ fontSize: 40 }}>👨‍🍳</Text>
           </View>
           <Text style={[styles.name, { color: colors.onBackground }]}>{profile?.full_name || 'Chef'}</Text>
-          <Text style={[styles.kitchen, { color: colors.primary }]}>Mama's Kitchen</Text>
+          <Text style={[styles.kitchen, { color: colors.primary }]}>{chefProfile?.kitchen_name || 'My Kitchen'}</Text>
           <View style={styles.statRow}>
-            {[{ n: '423', l: 'Orders' }, { n: '4.8', l: 'Rating' }, { n: '156', l: 'Followers' }].map((s) => (
+            {stats.map((s) => (
               <View key={s.l} style={styles.stat}>
                 <Text style={[styles.statN, { color: colors.primary }]}>{s.n}</Text>
                 <Text style={[styles.statL, { color: colors.onSurfaceVariant }]}>{s.l}</Text>
@@ -43,7 +102,10 @@ export default function ChefProfileScreen() {
         <View style={[styles.menu, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
           {MENU.map((item, idx) => (
             <TouchableOpacity key={item.label}
-              onPress={() => item.route && router.push(item.route as any)}
+              onPress={() => {
+                if ((item as any).action) (item as any).action();
+                else if ((item as any).route) router.push((item as any).route as any);
+              }}
               style={[styles.menuItem, idx < MENU.length - 1 && { borderBottomColor: colors.outlineVariant, borderBottomWidth: 0.5 }]}>
               <Ionicons name={item.icon as any} size={22} color={colors.onSurfaceVariant} />
               <Text style={[styles.menuLabel, { color: colors.onSurface }]}>{item.label}</Text>
@@ -62,6 +124,49 @@ export default function ChefProfileScreen() {
         </TouchableOpacity>
         <View style={{ height: 32 }} />
       </ScrollView>
+
+      {/* Kitchen Settings Modal */}
+      <Modal visible={showEditModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.editContent, { backgroundColor: colors.surfaceContainerLowest, ...shadows.lg }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={[styles.modalTitle, { color: colors.onBackground }]}>Kitchen Settings</Text>
+              <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                <Ionicons name="close" size={24} color={colors.onSurface} />
+              </TouchableOpacity>
+            </View>
+            <Input label="Kitchen Name" value={editKitchen} onChangeText={setEditKitchen} icon="storefront-outline" />
+            <Input label="Bio" value={editBio} onChangeText={setEditBio} multiline numberOfLines={3} style={{ minHeight: 70, textAlignVertical: 'top' }} />
+            <Input label="Specialty Tags (comma-separated)" placeholder="Algerian, Pastries, Bread" value={editTags} onChangeText={setEditTags} icon="pricetag-outline" />
+            <Input label="Delivery Radius (km)" value={editRadius} onChangeText={setEditRadius} keyboardType="numeric" icon="navigate-outline" />
+            <Button title="Save Changes" onPress={handleSave} loading={isSaving} size="lg" />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Language Modal */}
+      <Modal visible={showLangModal} transparent animationType="fade">
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowLangModal(false)}>
+          <View style={[styles.langContent, { backgroundColor: colors.surfaceContainerLowest, ...shadows.lg }]}>
+            <Text style={[styles.modalTitle, { color: colors.onBackground }]}>Language</Text>
+            {[
+              { code: 'en' as const, label: 'English', flag: '🇬🇧' },
+              { code: 'ar' as const, label: 'العربية', flag: '🇩🇿' },
+            ].map((lang) => (
+              <TouchableOpacity key={lang.code}
+                onPress={() => { changeLanguage(lang.code); setShowLangModal(false); }}
+                style={[styles.langOption, {
+                  backgroundColor: currentLanguage === lang.code ? colors.primaryFixed : 'transparent',
+                  borderColor: currentLanguage === lang.code ? colors.primary : colors.outlineVariant,
+                }]}>
+                <Text style={{ fontSize: 24 }}>{lang.flag}</Text>
+                <Text style={{ flex: 1, fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 16, fontWeight: '600', color: currentLanguage === lang.code ? colors.primary : colors.onSurface }}>{lang.label}</Text>
+                {currentLanguage === lang.code && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScreenWrapper>
   );
 }
@@ -79,4 +184,9 @@ const styles = StyleSheet.create({
   menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, paddingHorizontal: 16, gap: 14 },
   menuLabel: { flex: 1, fontFamily: 'PlusJakartaSans-Regular', fontSize: 15 },
   logout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderRadius: 14, paddingVertical: 14 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
+  editContent: { width: '90%', maxWidth: 420, borderRadius: 20, padding: 24 },
+  langContent: { width: '80%', maxWidth: 340, borderRadius: 20, padding: 24 },
+  modalTitle: { fontFamily: 'NotoSerif-Bold', fontSize: 20, fontWeight: '700', textAlign: 'center', marginBottom: 16 },
+  langOption: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 14, borderWidth: 1.5, marginBottom: 10, gap: 12 },
 });

@@ -136,21 +136,21 @@ export default function TrackOrderScreen() {
           <View style={styles.infoRow}>
             <Ionicons name="restaurant-outline" size={18} color={colors.onSurfaceVariant} />
             <Text style={[styles.infoValue, { color: colors.onSurface }]}>
-              {currentOrder?.post?.title || 'Couscous Royal'} × {currentOrder?.quantity || 2}
+              {currentOrder?.post?.title || 'Order item'} × {currentOrder?.quantity || 1}
             </Text>
           </View>
 
           <View style={styles.infoRow}>
             <Ionicons name="person-outline" size={18} color={colors.onSurfaceVariant} />
             <Text style={[styles.infoValue, { color: colors.onSurface }]}>
-              {currentOrder?.chef?.full_name || 'Chef Sarah K.'}
+              {currentOrder?.chef?.full_name || 'Chef'}
             </Text>
           </View>
 
           <View style={styles.infoRow}>
             <Ionicons name="cash-outline" size={18} color={colors.onSurfaceVariant} />
             <Text style={[styles.infoValue, { color: colors.primary, fontWeight: '700' }]}>
-              {currentOrder?.total_price || 1700} DA
+              {currentOrder?.total_price || 0} DA
             </Text>
           </View>
         </View>

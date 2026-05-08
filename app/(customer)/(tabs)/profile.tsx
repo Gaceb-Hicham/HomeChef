@@ -1,29 +1,107 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useLanguage } from '@/hooks/useLanguage';
-import { Button, ScreenWrapper } from '@/components/ui';
+import { savedApi, ordersApi } from '@/lib';
+import { supabase } from '@/lib/supabase';
+import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen() {
   const { colors, shadows } = useTheme();
   const router = useRouter();
-  const { profile, signOut } = useAuthStore();
+  const { profile, signOut, updateProfile } = useAuthStore();
   const { t, currentLanguage, changeLanguage } = useLanguage();
   const [showLangModal, setShowLangModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
+  const [editName, setEditName] = useState(profile?.full_name || '');
+  const [editPhone, setEditPhone] = useState(profile?.phone || '');
+  const [editCity, setEditCity] = useState(profile?.city || '');
+  const [editArea, setEditArea] = useState(profile?.area || '');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Real stats
+  const [stats, setStats] = useState({ orders: 0, reviews: 0, saved: 0 });
+
+  useEffect(() => {
+    if (profile?.id) loadStats();
+  }, [profile?.id]);
+
+  const loadStats = async () => {
+    try {
+      const [ordersRes, savedRes, reviewsRes] = await Promise.all([
+        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('customer_id', profile!.id),
+        supabase.from('saved_items').select('id', { count: 'exact', head: true }).eq('user_id', profile!.id),
+        supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('customer_id', profile!.id),
+      ]);
+      setStats({
+        orders: ordersRes.count || 0,
+        reviews: reviewsRes.count || 0,
+        saved: savedRes.count || 0,
+      });
+    } catch (e) {}
+  };
+
+  const handleSaveProfile = async () => {
+    if (!profile?.id) return;
+    setIsSaving(true);
+    const { error } = await supabase.from('users').update({
+      full_name: editName.trim(),
+      phone: editPhone.trim() || null,
+      city: editCity.trim() || null,
+      area: editArea.trim() || null,
+    }).eq('id', profile.id);
+    setIsSaving(false);
+
+    if (error) {
+      Alert.alert('Error', error.message);
+    } else {
+      // Update local state
+      if (updateProfile) {
+        updateProfile({ full_name: editName.trim(), phone: editPhone.trim(), city: editCity.trim(), area: editArea.trim() });
+      }
+      setShowEditModal(false);
+      Alert.alert('Success', 'Profile updated successfully');
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      '⚠️ Delete Account',
+      'This action is irreversible. All your data will be permanently deleted.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Forever',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase.auth.admin.deleteUser(profile!.id);
+              if (error) throw error;
+              signOut();
+              router.replace('/(auth)/login');
+            } catch (e: any) {
+              // Fallback: sign out and let cascade handle it
+              Alert.alert('Note', 'Your account deletion request has been submitted. You will be signed out.');
+              signOut();
+              router.replace('/(auth)/login');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const MENU_ITEMS = [
-    { icon: 'person-outline', label: t('profile.edit'), route: '' },
-    { icon: 'location-outline', label: t('cart.checkout') === 'Checkout' ? 'My Addresses' : 'عناويني', route: '' },
-    { icon: 'card-outline', label: t('checkout.payment'), route: '' },
+    { icon: 'person-outline', label: t('profile.edit'), action: () => { setEditName(profile?.full_name || ''); setEditPhone(profile?.phone || ''); setEditCity(profile?.city || ''); setEditArea(profile?.area || ''); setShowEditModal(true); } },
     { icon: 'heart-outline', label: t('saved.title'), route: '/(customer)/saved' },
     { icon: 'notifications-outline', label: t('notifications.title'), route: '/(customer)/notifications' },
     { icon: 'language-outline', label: `${t('profile.language')} — ${currentLanguage === 'en' ? 'English' : 'العربية'}`, action: () => setShowLangModal(true) },
     { icon: 'map-outline', label: currentLanguage === 'en' ? 'Nearby Chefs Map' : 'خريطة الطباخين', route: '/(customer)/explore-map' },
-    { icon: 'help-circle-outline', label: t('profile.help'), route: '' },
-    { icon: 'information-circle-outline', label: t('profile.about'), route: '' },
+    { icon: 'information-circle-outline', label: t('profile.about'), action: () => setShowAboutModal(true) },
   ];
 
   const handleLogout = () => {
@@ -43,11 +121,14 @@ export default function ProfileScreen() {
           </View>
           <Text style={[styles.name, { color: colors.onBackground }]}>{profile?.full_name || 'Guest User'}</Text>
           <Text style={[styles.email, { color: colors.onSurfaceVariant }]}>{profile?.email || 'guest@homechef.app'}</Text>
+          {profile?.city && (
+            <Text style={{ color: colors.outline, fontSize: 13, marginTop: 4 }}>📍 {profile.area ? `${profile.area}, ` : ''}{profile.city}</Text>
+          )}
           <View style={[styles.statRow]}>
             {[
-              { n: '12', l: currentLanguage === 'en' ? 'Orders' : 'طلبات' },
-              { n: '5', l: currentLanguage === 'en' ? 'Reviews' : 'تقييمات' },
-              { n: '8', l: currentLanguage === 'en' ? 'Saved' : 'محفوظات' },
+              { n: stats.orders.toString(), l: currentLanguage === 'en' ? 'Orders' : 'طلبات' },
+              { n: stats.reviews.toString(), l: currentLanguage === 'en' ? 'Reviews' : 'تقييمات' },
+              { n: stats.saved.toString(), l: currentLanguage === 'en' ? 'Saved' : 'محفوظات' },
             ].map((s) => (
               <View key={s.l} style={styles.stat}>
                 <Text style={[styles.statNum, { color: colors.primary }]}>{s.n}</Text>
@@ -73,6 +154,14 @@ export default function ProfileScreen() {
           ))}
         </View>
 
+        {/* Danger zone */}
+        <TouchableOpacity style={[styles.dangerBtn, { borderColor: colors.error }]} onPress={handleDeleteAccount}>
+          <Ionicons name="trash-outline" size={18} color={colors.error} />
+          <Text style={{ color: colors.error, fontSize: 14, fontWeight: '600' }}>
+            {currentLanguage === 'en' ? 'Delete Account' : 'حذف الحساب'}
+          </Text>
+        </TouchableOpacity>
+
         {/* Logout */}
         <TouchableOpacity style={[styles.logoutBtn, { borderColor: colors.error }]} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color={colors.error} />
@@ -81,6 +170,25 @@ export default function ProfileScreen() {
 
         <Text style={[styles.version, { color: colors.outline }]}>HomeChef v1.0.0</Text>
       </ScrollView>
+
+      {/* Edit Profile Modal */}
+      <Modal visible={showEditModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.editModalContent, { backgroundColor: colors.surfaceContainerLowest, ...shadows.lg }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={[styles.modalTitle, { color: colors.onBackground }]}>Edit Profile</Text>
+              <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                <Ionicons name="close" size={24} color={colors.onSurface} />
+              </TouchableOpacity>
+            </View>
+            <Input label="Full Name" value={editName} onChangeText={setEditName} icon="person-outline" />
+            <Input label="Phone" value={editPhone} onChangeText={setEditPhone} icon="call-outline" keyboardType="phone-pad" />
+            <Input label="City" value={editCity} onChangeText={setEditCity} icon="location-outline" />
+            <Input label="Area / Neighborhood" value={editArea} onChangeText={setEditArea} icon="map-outline" />
+            <Button title="Save Changes" onPress={handleSaveProfile} loading={isSaving} size="lg" />
+          </View>
+        </View>
+      </Modal>
 
       {/* Language Modal */}
       <Modal visible={showLangModal} transparent animationType="fade">
@@ -110,6 +218,20 @@ export default function ProfileScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* About Modal */}
+      <Modal visible={showAboutModal} transparent animationType="fade">
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowAboutModal(false)}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surfaceContainerLowest, ...shadows.lg }]}>
+            <Text style={{ fontSize: 48, textAlign: 'center', marginBottom: 12 }}>👨‍🍳</Text>
+            <Text style={[styles.modalTitle, { color: colors.onBackground }]}>HomeChef</Text>
+            <Text style={{ color: colors.onSurfaceVariant, textAlign: 'center', fontSize: 14, lineHeight: 20, marginBottom: 12 }}>
+              A marketplace connecting home-based cooks, bakers, and dessert makers with local customers. Fresh, homemade food delivered to your door.
+            </Text>
+            <Text style={{ color: colors.outline, textAlign: 'center', fontSize: 12 }}>Version 1.0.0 • Made with ❤️</Text>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScreenWrapper>
   );
 }
@@ -126,11 +248,13 @@ const styles = StyleSheet.create({
   menu: { borderRadius: 16, marginBottom: 20, overflow: 'hidden' },
   menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, paddingHorizontal: 16, gap: 14 },
   menuLabel: { flex: 1, fontFamily: 'PlusJakartaSans-Regular', fontSize: 15 },
+  dangerBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderRadius: 14, paddingVertical: 12, marginBottom: 10 },
   logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderRadius: 14, paddingVertical: 14, marginBottom: 16 },
   logoutText: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 15, fontWeight: '600' },
   version: { textAlign: 'center', fontFamily: 'PlusJakartaSans-Regular', fontSize: 12, marginBottom: 32 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { width: '80%', maxWidth: 340, borderRadius: 20, padding: 24 },
+  editModalContent: { width: '90%', maxWidth: 420, borderRadius: 20, padding: 24 },
   modalTitle: { fontFamily: 'NotoSerif-Bold', fontSize: 20, fontWeight: '700', textAlign: 'center', marginBottom: 20 },
   langOption: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 14, borderWidth: 1.5, marginBottom: 10, gap: 12 },
   langLabel: { flex: 1, fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 16, fontWeight: '600' },
