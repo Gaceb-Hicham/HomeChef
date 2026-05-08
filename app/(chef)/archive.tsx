@@ -7,45 +7,27 @@ import { postsApi } from '@/lib';
 import { ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
-// Mock data for demo mode
-const MOCK_ARCHIVE = [
-  { id: '1', title: 'Couscous Royal', price: 850, created_at: '2026-04-28T12:00:00Z', available_quantity: 15, remaining_quantity: 3 },
-  { id: '2', title: 'Baklava Box', price: 600, created_at: '2026-04-27T10:00:00Z', available_quantity: 20, remaining_quantity: 0 },
-  { id: '3', title: 'Chicken Tagine', price: 950, created_at: '2026-04-26T09:00:00Z', available_quantity: 12, remaining_quantity: 5 },
-  { id: '4', title: 'Makroud', price: 400, created_at: '2026-04-25T11:00:00Z', available_quantity: 30, remaining_quantity: 8 },
-  { id: '5', title: 'Chorba Frik', price: 500, created_at: '2026-04-24T08:00:00Z', available_quantity: 10, remaining_quantity: 0 },
-  { id: '6', title: 'Bourak', price: 350, created_at: '2026-04-23T14:00:00Z', available_quantity: 25, remaining_quantity: 2 },
-];
-
 export default function ArchiveScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
   const profile = useAuthStore((s) => s.profile);
-  const isDemoMode = useAuthStore((s) => s.isDemoMode);
   const [archive, setArchive] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadArchive();
+    if (profile?.id) {
+      loadArchive();
+    } else {
+      setLoading(false);
+    }
   }, [profile?.id]);
 
   const loadArchive = async () => {
-    // For demo users or when no profile, use mock data
-    if (isDemoMode || !profile?.id || profile.id.startsWith('demo')) {
-      setArchive(MOCK_ARCHIVE);
-      setLoading(false);
-      return;
-    }
-
     try {
-      const { data } = await postsApi.getChefArchive(profile.id, 50);
-      if (data && data.length > 0) {
-        setArchive(data);
-      } else {
-        setArchive(MOCK_ARCHIVE);
-      }
+      const { data } = await postsApi.getChefArchive(profile!.id, 50);
+      if (data) setArchive(data);
     } catch (e) {
-      setArchive(MOCK_ARCHIVE);
+      // API error — show empty state
     } finally {
       setLoading(false);
     }

@@ -126,18 +126,20 @@ export default function ChefOrdersScreen() {
       </View>
 
       {/* Status tabs */}
-      <FlatList data={STATUS_TABS} horizontal showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, gap: 8, marginBottom: 16 }}
-        renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => setActiveTab(item)}
-            style={[styles.tab, { backgroundColor: activeTab === item ? colors.primary : colors.surfaceContainerLow, borderColor: activeTab === item ? colors.primary : colors.outlineVariant }]}>
-            <Text style={{ color: activeTab === item ? colors.onPrimary : colors.onSurfaceVariant, fontSize: 12, fontWeight: '600', textTransform: 'capitalize' }}>
-              {item.replace(/_/g, ' ')}
-            </Text>
-          </TouchableOpacity>
-        )}
-        keyExtractor={(i) => i}
-      />
+      <View style={{ marginBottom: 16 }}>
+        <FlatList data={STATUS_TABS} horizontal showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
+          renderItem={({ item }) => (
+            <TouchableOpacity onPress={() => setActiveTab(item)}
+              style={[styles.tab, { backgroundColor: activeTab === item ? colors.primary : colors.surfaceContainerLow, borderColor: activeTab === item ? colors.primary : colors.outlineVariant }]}>
+              <Text style={{ color: activeTab === item ? colors.onPrimary : colors.onSurfaceVariant, fontSize: 12, fontWeight: '600', textTransform: 'capitalize' }}>
+                {item.replace(/_/g, ' ')}
+              </Text>
+            </TouchableOpacity>
+          )}
+          keyExtractor={(i) => i}
+        />
+      </View>
 
       {/* Orders list */}
       <FlatList data={filtered} renderItem={renderOrder} keyExtractor={(i: any) => i.id}

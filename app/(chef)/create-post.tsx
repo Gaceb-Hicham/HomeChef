@@ -66,18 +66,6 @@ export default function CreatePostScreen() {
     }, 15000);
 
     try {
-      // In demo mode, skip real API calls
-      const isDemoUser = useAuthStore.getState().isDemoMode || profile.id.startsWith('demo');
-
-      if (isDemoUser) {
-        clearTimeout(timeout);
-        setIsLoading(false);
-        crossAlert('Published! 🎉', 'Your daily special is now live. All followers have been notified.', [
-          { text: 'Done', onPress: () => router.back() },
-        ]);
-        return;
-      }
-
       // Upload photos if any
       let photoUrls: string[] = [];
       if (selectedPhotos.length > 0) {
