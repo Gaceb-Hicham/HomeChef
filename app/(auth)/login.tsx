@@ -46,6 +46,15 @@ export default function LoginScreen() {
     } else {
       const profile = useAuthStore.getState().profile;
       if (profile?.role === 'chef') {
+        // Check if chef has completed onboarding
+        try {
+          const { chefApi } = require('@/lib');
+          const { data } = await chefApi.getChefProfile(profile.id);
+          if (!data || !data.kitchen_name) {
+            router.replace('/(chef)/onboarding');
+            return;
+          }
+        } catch (e) {}
         router.replace('/(chef)/(tabs)/dashboard');
       } else {
         router.replace('/(customer)/(tabs)/home');
@@ -128,39 +137,42 @@ export default function LoginScreen() {
             <Button title="Sign In" onPress={handleLogin} loading={isLoading} size="lg" />
           </View>
 
-          {/* Divider */}
-          <View style={styles.dividerRow}>
-            <View style={[styles.dividerLine, { backgroundColor: colors.outlineVariant }]} />
-            <Text style={[styles.dividerText, { color: colors.outline }]}>or try demo mode</Text>
-            <View style={[styles.dividerLine, { backgroundColor: colors.outlineVariant }]} />
-          </View>
+          {/* Demo Mode — DEV only */}
+          {__DEV__ && (
+            <>
+              <View style={styles.dividerRow}>
+                <View style={[styles.dividerLine, { backgroundColor: colors.outlineVariant }]} />
+                <Text style={[styles.dividerText, { color: colors.outline }]}>dev mode</Text>
+                <View style={[styles.dividerLine, { backgroundColor: colors.outlineVariant }]} />
+              </View>
 
-          {/* Demo Mode Buttons */}
-          <View style={styles.demoRow}>
-            <TouchableOpacity
-              style={[styles.demoButton, { backgroundColor: colors.primaryFixed, borderColor: colors.primary }]}
-              onPress={() => {
-                demoLogin('customer');
-                router.replace('/(customer)/(tabs)/home');
-              }}
-            >
-              <Text style={{ fontSize: 24 }}>🍽️</Text>
-              <Text style={[styles.demoTitle, { color: colors.primary }]}>Customer Demo</Text>
-              <Text style={[styles.demoSubtitle, { color: colors.onSurfaceVariant }]}>Browse & order food</Text>
-            </TouchableOpacity>
+              <View style={styles.demoRow}>
+                <TouchableOpacity
+                  style={[styles.demoButton, { backgroundColor: colors.primaryFixed, borderColor: colors.primary }]}
+                  onPress={() => {
+                    demoLogin('customer');
+                    router.replace('/(customer)/(tabs)/home');
+                  }}
+                >
+                  <Text style={{ fontSize: 24 }}>🍽️</Text>
+                  <Text style={[styles.demoTitle, { color: colors.primary }]}>Customer Demo</Text>
+                  <Text style={[styles.demoSubtitle, { color: colors.onSurfaceVariant }]}>Browse & order food</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.demoButton, { backgroundColor: colors.primaryFixed, borderColor: colors.primary }]}
-              onPress={() => {
-                demoLogin('chef');
-                router.replace('/(chef)/(tabs)/dashboard');
-              }}
-            >
-              <Text style={{ fontSize: 24 }}>👨‍🍳</Text>
-              <Text style={[styles.demoTitle, { color: colors.primary }]}>Chef Demo</Text>
-              <Text style={[styles.demoSubtitle, { color: colors.onSurfaceVariant }]}>Manage your kitchen</Text>
-            </TouchableOpacity>
-          </View>
+                <TouchableOpacity
+                  style={[styles.demoButton, { backgroundColor: colors.primaryFixed, borderColor: colors.primary }]}
+                  onPress={() => {
+                    demoLogin('chef');
+                    router.replace('/(chef)/(tabs)/dashboard');
+                  }}
+                >
+                  <Text style={{ fontSize: 24 }}>👨‍🍳</Text>
+                  <Text style={[styles.demoTitle, { color: colors.primary }]}>Chef Demo</Text>
+                  <Text style={[styles.demoSubtitle, { color: colors.onSurfaceVariant }]}>Manage your kitchen</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
 
           {/* Sign up link */}
           <View style={styles.signupRow}>

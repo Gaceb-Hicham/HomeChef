@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { usePostsStore } from '@/stores/postsStore';
 import { useNotificationsStore } from '@/stores/appStores';
 import { useRealtimeFeed } from '@/hooks/useRealtime';
-import { ScreenWrapper } from '@/components/ui';
+import { ScreenWrapper, PostImage, AvatarImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -65,7 +65,7 @@ export default function HomeScreen() {
   const feedChefs = posts.reduce((acc: any[], p: any) => {
     const chef = p.chef;
     if (chef && !acc.find((c: any) => c.id === chef.id)) {
-      acc.push({ id: chef.id, name: chef.full_name || 'Chef', avatar: '👨‍🍳', hasStory: true });
+      acc.push({ id: chef.id, name: chef.full_name || 'Chef', avatar: chef.profile_photo_url, hasStory: true });
     }
     return acc;
   }, []);
@@ -73,9 +73,7 @@ export default function HomeScreen() {
   const renderStory = ({ item }: { item: any }) => (
     <TouchableOpacity style={styles.storyItem} onPress={() => router.push(`/(customer)/chef/${item.id}`)}>
       <View style={[styles.storyRing, { borderColor: colors.primary }]}>
-        <View style={[styles.storyAvatar, { backgroundColor: colors.surfaceContainerHigh }]}>
-          <Text style={{ fontSize: 26 }}>{item.avatar}</Text>
-        </View>
+        <AvatarImage uri={item.avatar} size={54} emoji="👨‍🍳" />
       </View>
       <Text style={[styles.storyName, { color: colors.onSurface }]} numberOfLines={1}>
         {item.name.split(' ')[0]}
@@ -96,12 +94,8 @@ export default function HomeScreen() {
         onPress={() => router.push(`/(customer)/offer/${item.id}`)}
         style={[styles.postCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.md }]}
       >
-        <View style={[styles.postImage, { backgroundColor: colors.surfaceContainerHigh }]}>
-          {item.photos && item.photos.length > 0 ? (
-            <Text style={{ fontSize: 56 }}>🍽️</Text>
-          ) : (
-            <Text style={{ fontSize: 56 }}>{item.emoji || '🍽️'}</Text>
-          )}
+        <View style={styles.postImage}>
+          <PostImage photos={item.photos} height={180} borderRadius={0} />
           <View style={[styles.remainingBadge, { backgroundColor: colors.tertiaryContainer }]}>
             <Text style={[styles.remainingText, { color: colors.onTertiaryContainer }]}>
               {remaining} left
@@ -111,9 +105,7 @@ export default function HomeScreen() {
 
         <View style={styles.postContent}>
           <View style={styles.chefRow}>
-            <View style={[styles.chefMiniAvatar, { backgroundColor: colors.surfaceContainerHigh }]}>
-              <Text style={{ fontSize: 14 }}>{item.chefAvatar || '👨‍🍳'}</Text>
-            </View>
+            <AvatarImage uri={item.chef?.profile_photo_url} size={24} emoji="👨‍🍳" />
             <Text style={[styles.chefName, { color: colors.onSurfaceVariant }]}>{chefName}</Text>
             <View style={{ flex: 1 }} />
             <Ionicons name="time-outline" size={14} color={colors.outline} />

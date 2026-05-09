@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking } from 'rea
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useOrdersStore } from '@/stores/ordersStore';
-import { ScreenWrapper, Button } from '@/components/ui';
+import { ScreenWrapper, Button, AvatarImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
@@ -66,9 +66,7 @@ export default function ChefOrdersScreen() {
     return (
       <View style={[styles.card, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
         <View style={styles.cardTop}>
-          <View style={[styles.avatar, { backgroundColor: colors.surfaceContainerHigh }]}>
-            <Text style={{ fontSize: 22 }}>👤</Text>
-          </View>
+          <AvatarImage uri={item.customer?.profile_photo_url} size={44} emoji="👤" />
           <View style={{ flex: 1 }}>
             <Text style={[styles.customerName, { color: colors.onSurface }]}>
               {item.customer?.full_name || 'Customer'}

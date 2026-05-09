@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { usePostsStore } from '@/stores/postsStore';
 import { useCartStore } from '@/stores/cartStore';
 import { useSavedStore } from '@/stores/appStores';
-import { ScreenWrapper, Button } from '@/components/ui';
+import { ScreenWrapper, Button, PostImage, AvatarImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
@@ -65,7 +65,7 @@ export default function OfferDetailScreen() {
       chefId: chef.id,
       chefName: chef.full_name,
       title: post.title,
-      photo: '',
+      photo: (post.photos && post.photos.length > 0) ? post.photos[0] : '',
       price: post.price,
       maxQuantity: maxQty,
     });
@@ -84,8 +84,8 @@ export default function OfferDetailScreen() {
     <ScreenWrapper padded={false}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Hero */}
-        <View style={[styles.hero, { backgroundColor: colors.surfaceContainerHigh }]}>
-          <Text style={{ fontSize: 72 }}>🍲</Text>
+        <View style={styles.hero}>
+          <PostImage photos={post.photos} height={260} fallbackSize={72} />
           <View style={[styles.remainingBadge, { backgroundColor: colors.tertiaryContainer }]}>
             <Text style={{ color: colors.onTertiaryContainer, fontWeight: '700', fontSize: 12 }}>{maxQty} left</Text>
           </View>
@@ -105,9 +105,7 @@ export default function OfferDetailScreen() {
           {/* Chef info */}
           <TouchableOpacity onPress={() => router.push(`/(customer)/chef/${chef.id}`)}
             style={[styles.chefCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
-            <View style={[styles.chefAvatar, { backgroundColor: colors.surfaceContainerHigh }]}>
-              <Text style={{ fontSize: 24 }}>👩‍🍳</Text>
-            </View>
+            <AvatarImage uri={chef.profile_photo_url} size={48} emoji="👩‍🍳" />
             <View style={{ flex: 1 }}>
               <Text style={[styles.chefName, { color: colors.onSurface }]}>{chefProfile.kitchen_name}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -151,8 +149,8 @@ export default function OfferDetailScreen() {
               {reviews.slice(0, 3).map((r: any) => (
                 <View key={r.id} style={[styles.reviewCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
                   <View style={styles.reviewHeader}>
-                    <View style={[styles.reviewAvatar, { backgroundColor: colors.surfaceContainerHigh }]}>
-                      <Text style={{ fontSize: 16 }}>👤</Text>
+                    <View style={styles.reviewAvatar}>
+                      <AvatarImage uri={r.customer?.profile_photo_url} size={32} emoji="👤" />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ color: colors.onSurface, fontWeight: '600', fontSize: 13 }}>{r.customer?.full_name}</Text>

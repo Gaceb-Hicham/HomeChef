@@ -47,8 +47,43 @@ export default function CreatePostScreen() {
   };
 
   const handlePublish = async () => {
-    if (!title.trim() || !price || !quantity) {
-      infoAlert('Missing Fields', 'Please fill in title, price, and quantity.');
+    // ── Validation ──────────────────────────────────────────
+    if (!title.trim()) {
+      infoAlert('Missing Title', 'Please enter a dish name.');
+      return;
+    }
+
+    const parsedPrice = parseInt(price);
+    if (!price || isNaN(parsedPrice) || parsedPrice <= 0) {
+      infoAlert('Invalid Price', 'Price must be a positive number (in DA).');
+      return;
+    }
+
+    const parsedQty = parseInt(quantity);
+    if (!quantity || isNaN(parsedQty) || parsedQty <= 0) {
+      infoAlert('Invalid Quantity', 'Quantity must be at least 1.');
+      return;
+    }
+
+    // Validate deadline format (HH:MM)
+    const timeRegex = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+    if (!timeRegex.test(deadline.trim())) {
+      infoAlert('Invalid Deadline', 'Please enter a valid time in HH:MM format (e.g. 14:00).');
+      return;
+    }
+
+    // Check deadline is in the future
+    const now = new Date();
+    const [hours, minutes] = deadline.trim().split(':').map(Number);
+    const deadlineDate = new Date();
+    deadlineDate.setHours(hours, minutes, 0, 0);
+    if (deadlineDate <= now) {
+      infoAlert('Deadline Passed', 'The order deadline must be in the future.');
+      return;
+    }
+
+    if (!delivery && !pickup) {
+      infoAlert('No Delivery Method', 'Please enable at least one delivery method (Delivery or Pickup).');
       return;
     }
 

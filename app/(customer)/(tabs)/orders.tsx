@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useOrdersStore } from '@/stores/ordersStore';
-import { ScreenWrapper } from '@/components/ui';
+import { ScreenWrapper, PostImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; icon: string }> = {
@@ -56,9 +56,7 @@ export default function OrdersScreen() {
         }}
         style={[styles.card, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
         <View style={styles.cardRow}>
-          <View style={[styles.cardImg, { backgroundColor: colors.surfaceContainerHigh }]}>
-            <Text style={{ fontSize: 28 }}>🍽️</Text>
-          </View>
+          <PostImage photos={item.post?.photos} height={52} borderRadius={14} fallbackSize={28} style={{ width: 52 }} />
           <View style={{ flex: 1 }}>
             <Text style={[styles.cardTitle, { color: colors.onSurface }]}>{item.post?.title} × {item.quantity}</Text>
             <Text style={[styles.cardChef, { color: colors.onSurfaceVariant }]}>by {item.chef?.full_name}</Text>

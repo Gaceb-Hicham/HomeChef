@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { postsApi } from '@/lib';
-import { ScreenWrapper } from '@/components/ui';
+import { ScreenWrapper, PostImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ArchiveScreen() {
@@ -61,9 +61,7 @@ export default function ArchiveScreen() {
         }
         renderItem={({ item }: { item: any }) => (
           <View style={[styles.card, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
-            <View style={[styles.cardImg, { backgroundColor: colors.surfaceContainerHigh }]}>
-              <Text style={{ fontSize: 36 }}>🍽️</Text>
-            </View>
+            <PostImage photos={item.photos} height={100} borderRadius={12} fallbackSize={36} />
             <View style={{ padding: 10 }}>
               <Text style={[styles.cardTitle, { color: colors.onSurface }]} numberOfLines={1}>{item.title}</Text>
               <Text style={[styles.cardPrice, { color: colors.primary }]}>{item.price} DA</Text>

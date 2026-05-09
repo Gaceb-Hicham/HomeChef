@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useCartStore } from '@/stores/cartStore';
-import { Button, ScreenWrapper } from '@/components/ui';
+import { Button, ScreenWrapper, PostImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function CartScreen() {
@@ -35,9 +35,7 @@ export default function CartScreen() {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <View style={[styles.card, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
-            <View style={[styles.itemImg, { backgroundColor: colors.surfaceContainerHigh }]}>
-              <Text style={{ fontSize: 32 }}>🍽️</Text>
-            </View>
+            <PostImage uri={item.photo} height={60} borderRadius={14} fallbackSize={32} style={{ width: 60 }} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.itemName, { color: colors.onSurface }]}>{item.title}</Text>
               <Text style={[styles.itemChef, { color: colors.onSurfaceVariant }]}>{item.chefName}</Text>

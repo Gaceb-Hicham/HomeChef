@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useSavedStore } from '@/stores/appStores';
-import { ScreenWrapper } from '@/components/ui';
+import { ScreenWrapper, PostImage, AvatarImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function SavedScreen() {
@@ -48,9 +48,7 @@ export default function SavedScreen() {
           contentContainerStyle={{ paddingHorizontal: 20, gap: 10, paddingBottom: 24 }}
           renderItem={({ item }: { item: any }) => (
             <View style={[styles.card, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
-              <View style={[styles.cardImg, { backgroundColor: colors.surfaceContainerHigh }]}>
-                <Text style={{ fontSize: 28 }}>{item.emoji || '🍽️'}</Text>
-              </View>
+              <PostImage photos={item.photos} uri={item.photo} height={52} borderRadius={14} fallbackSize={28} style={{ width: 52 }} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.cardTitle, { color: colors.onSurface }]}>{item.title || 'Saved Dish'}</Text>
                 <Text style={[styles.cardSub, { color: colors.onSurfaceVariant }]}>by {item.chef || 'Chef'}</Text>
@@ -73,9 +71,7 @@ export default function SavedScreen() {
             <TouchableOpacity
               onPress={() => router.push(`/(customer)/chef/${item.id || item.reference_id}`)}
               style={[styles.card, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
-              <View style={[styles.chefAvatar, { backgroundColor: colors.surfaceContainerHigh }]}>
-                <Text style={{ fontSize: 28 }}>{item.emoji || '👨‍🍳'}</Text>
-              </View>
+              <AvatarImage uri={item.photo_url} size={52} emoji="👨‍🍳" />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.cardTitle, { color: colors.onSurface }]}>{item.name || 'Chef'}</Text>
                 <Text style={[styles.cardSub, { color: colors.onSurfaceVariant }]}>{item.specialty || ''}</Text>

@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useOrdersStore } from '@/stores/ordersStore';
 import { useChefProfileStore } from '@/stores/appStores';
 import { useRealtimeChefOrders } from '@/hooks/useRealtime';
-import { Button, ScreenWrapper } from '@/components/ui';
+import { Button, ScreenWrapper, AvatarImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
@@ -124,9 +124,7 @@ export default function DashboardScreen() {
 
         {recentOrders.map((order: any) => (
           <View key={order.id} style={[styles.orderRow, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
-            <View style={[styles.orderAvatar, { backgroundColor: colors.surfaceContainerHigh }]}>
-              <Text style={{ fontSize: 20 }}>👤</Text>
-            </View>
+            <AvatarImage uri={order.customer_photo} size={40} emoji="👤" />
             <View style={{ flex: 1 }}>
               <Text style={[styles.orderCustomer, { color: colors.onSurface }]}>{order.customer}</Text>
               <Text style={[styles.orderDish, { color: colors.onSurfaceVariant }]}>{order.dish} x{order.qty}</Text>

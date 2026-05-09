@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { chefApi, postsApi, followersApi } from '@/lib';
-import { ScreenWrapper } from '@/components/ui';
+import { ScreenWrapper, AvatarImage, PostImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ChefProfileScreen() {
@@ -99,7 +99,7 @@ export default function ChefProfileScreen() {
         {/* Profile card */}
         <View style={[styles.profileCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.md }]}>
           <View style={[styles.avatar, { backgroundColor: colors.primaryFixed }]}>
-            <Text style={{ fontSize: 44 }}>👨‍🍳</Text>
+            <AvatarImage uri={chefProfile.user?.profile_photo_url || chefProfile.cover_photo_url} size={72} emoji="👨‍🍳" />
           </View>
           <Text style={[styles.name, { color: colors.onBackground }]}>{chefName}</Text>
           <Text style={[styles.kitchen, { color: colors.primary }]}>{kitchenName}</Text>
@@ -145,9 +145,7 @@ export default function ChefProfileScreen() {
               {archive.map((item: any) => (
                 <TouchableOpacity key={item.id} style={[styles.gridCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}
                   onPress={() => router.push(`/(customer)/offer/${item.id}`)}>
-                  <View style={[styles.gridImg, { backgroundColor: colors.surfaceContainerHigh }]}>
-                    <Text style={{ fontSize: 32 }}>🍽️</Text>
-                  </View>
+                  <PostImage photos={item.photos} height={100} borderRadius={0} fallbackSize={32} />
                   <Text style={[styles.gridTitle, { color: colors.onSurface }]} numberOfLines={1}>{item.title}</Text>
                   <Text style={[styles.gridPrice, { color: colors.primary }]}>{item.price} DA</Text>
                   <Text style={[styles.gridDate, { color: colors.outline }]}>{new Date(item.created_at).toLocaleDateString()}</Text>

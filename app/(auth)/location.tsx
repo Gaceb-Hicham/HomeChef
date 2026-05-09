@@ -46,10 +46,30 @@ export default function LocationScreen() {
     navigateHome();
   };
 
-  const navigateHome = () => {
+  const navigateHome = async () => {
     const role = profile?.role || useAuthStore.getState().selectedRole;
-    if (role === 'chef') router.replace('/(chef)/(tabs)/dashboard');
-    else router.replace('/(customer)/(tabs)/home');
+    if (role === 'chef') {
+      // Check if chef has completed onboarding (has a chef_profiles entry)
+      try {
+        const { chefApi } = require('@/lib');
+        const userId = profile?.id || useAuthStore.getState().profile?.id;
+        if (userId) {
+          const { data } = await chefApi.getChefProfile(userId);
+          if (!data || !data.kitchen_name) {
+            // No kitchen profile yet → onboarding
+            router.replace('/(chef)/onboarding');
+            return;
+          }
+        }
+      } catch (e) {
+        // If check fails, go to onboarding to be safe
+        router.replace('/(chef)/onboarding');
+        return;
+      }
+      router.replace('/(chef)/(tabs)/dashboard');
+    } else {
+      router.replace('/(customer)/(tabs)/home');
+    }
   };
 
   return (

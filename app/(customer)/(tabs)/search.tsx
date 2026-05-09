@@ -1,10 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { usePostsStore } from '@/stores/postsStore';
 import { chefApi } from '@/lib';
-import { ScreenWrapper } from '@/components/ui';
+import { ScreenWrapper, PostImage, AvatarImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
 // Category suggestions (not fake data — these are search helpers)
@@ -34,15 +34,24 @@ export default function SearchScreen() {
     } catch (e) {}
   };
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleSearch = useCallback((text: string) => {
     setQuery(text);
+
+    // Clear previous debounce
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
     if (text.trim().length >= 2) {
-      searchPosts(text);
-      // Add to recent searches
-      setRecentSearches(prev => {
-        const filtered = prev.filter(s => s !== text);
-        return [text, ...filtered].slice(0, 6);
-      });
+      // Debounce 300ms to avoid hammering the API
+      debounceRef.current = setTimeout(() => {
+        searchPosts(text);
+        // Add to recent searches
+        setRecentSearches(prev => {
+          const filtered = prev.filter(s => s !== text);
+          return [text, ...filtered].slice(0, 6);
+        });
+      }, 300);
     } else {
       clearSearch();
     }
@@ -93,9 +102,7 @@ export default function SearchScreen() {
             <TouchableOpacity
               onPress={() => router.push(`/(customer)/offer/${item.id}`)}
               style={[styles.resultCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
-              <View style={[styles.resultImg, { backgroundColor: colors.surfaceContainerHigh }]}>
-                <Text style={{ fontSize: 28 }}>🍽️</Text>
-              </View>
+              <PostImage photos={item.photos} height={52} borderRadius={14} fallbackSize={28} style={{ width: 52 }} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.resultTitle, { color: colors.onSurface }]}>{item.title}</Text>
                 <Text style={[styles.resultChef, { color: colors.onSurfaceVariant }]}>
@@ -150,9 +157,7 @@ export default function SearchScreen() {
                     <TouchableOpacity key={c.id || c.user_id}
                       onPress={() => router.push(`/(customer)/chef/${c.user_id}`)}
                       style={[styles.chefRow, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
-                      <View style={[styles.chefAvatar, { backgroundColor: colors.surfaceContainerHigh }]}>
-                        <Text style={{ fontSize: 24 }}>👨‍🍳</Text>
-                      </View>
+                      <AvatarImage uri={c.cover_photo_url} size={48} emoji="👨‍🍳" />
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.chefName, { color: colors.onSurface }]}>{c.kitchen_name}</Text>
                         <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{(c.specialty_tags || []).join(' • ')}</Text>

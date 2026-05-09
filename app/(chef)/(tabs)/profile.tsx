@@ -7,7 +7,7 @@ import { useChefProfileStore } from '@/stores/appStores';
 import { useLanguage } from '@/hooks/useLanguage';
 import { chefApi, followersApi } from '@/lib';
 import { supabase } from '@/lib/supabase';
-import { Button, Input, ScreenWrapper } from '@/components/ui';
+import { Button, Input, ScreenWrapper, AvatarImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
 
@@ -86,7 +86,7 @@ export default function ChefProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={[styles.avatar, { backgroundColor: colors.primaryFixed }]}>
-            <Text style={{ fontSize: 40 }}>👨‍🍳</Text>
+            <AvatarImage uri={profile?.profile_photo_url} size={80} emoji="👨‍🍳" />
           </View>
           <Text style={[styles.name, { color: colors.onBackground }]}>{profile?.full_name || 'Chef'}</Text>
           <Text style={[styles.kitchen, { color: colors.primary }]}>{chefProfile?.kitchen_name || 'My Kitchen'}</Text>
