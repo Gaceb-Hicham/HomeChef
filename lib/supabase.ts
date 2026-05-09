@@ -64,6 +64,8 @@ export type Database = {
           response_rate: number;
           is_open: boolean;
           delivery_radius_km: number;
+          latitude: number | null;
+          longitude: number | null;
           created_at: string;
         };
         Insert: Omit<Database['public']['Tables']['chef_profiles']['Row'], 'id' | 'created_at' | 'rating_average' | 'total_reviews' | 'total_orders_fulfilled' | 'response_rate'>;

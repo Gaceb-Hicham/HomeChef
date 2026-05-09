@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
@@ -11,6 +11,7 @@ import { Button, Input, ScreenWrapper, AvatarImage, ProfilePhotoUpload } from '@
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
 import { useThemeStore } from '@/stores/themeStore';
+import { useToast } from '@/components/ui/Toast';
 
 export default function ChefProfileScreen() {
   const { colors, shadows } = useTheme();
@@ -23,6 +24,7 @@ export default function ChefProfileScreen() {
   const [showLangModal, setShowLangModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
   const { mode: themeMode, setMode: setThemeMode, loadSavedMode } = useThemeStore();
+  const { showToast } = useToast();
   const [editKitchen, setEditKitchen] = useState('');
   const [editBio, setEditBio] = useState('');
   const [editTags, setEditTags] = useState('');
@@ -71,6 +73,55 @@ export default function ChefProfileScreen() {
     }
   };
 
+  const handleSetLocation = async () => {
+    if (Platform.OS === 'web') {
+      if (!navigator.geolocation) {
+        showToast('Geolocation not supported', 'error');
+        return;
+      }
+      showToast('Detecting location...', 'info');
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          if (!profile?.id) return;
+          const { error } = await chefApi.updateChefProfile(profile.id, {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          });
+          if (!error) {
+            fetchProfile(profile.id);
+            showToast('Kitchen location updated ✓', 'success');
+          } else {
+            showToast('Failed to save location', 'error');
+          }
+        },
+        () => showToast('Location access denied', 'warning'),
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } else {
+      try {
+        const Location = require('expo-location');
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          showToast('Location permission denied', 'warning');
+          return;
+        }
+        showToast('Detecting location...', 'info');
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        if (!profile?.id) return;
+        const { error } = await chefApi.updateChefProfile(profile.id, {
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+        });
+        if (!error) {
+          fetchProfile(profile.id);
+          showToast('Kitchen location updated ✓', 'success');
+        }
+      } catch (e) {
+        showToast('Could not get location', 'error');
+      }
+    }
+  };
+
   const stats = [
     { n: (chefProfile?.total_orders_fulfilled || 0).toString(), l: 'Orders' },
     { n: chefProfile?.rating_average ? chefProfile.rating_average.toString() : '-', l: 'Rating' },
@@ -80,6 +131,7 @@ export default function ChefProfileScreen() {
   const MENU = [
     { icon: 'storefront-outline', label: 'Kitchen Settings', action: openEdit },
     { icon: 'images-outline', label: 'Kitchen Archive', route: '/(chef)/archive' },
+    { icon: 'location-outline', label: chefProfile?.latitude ? `Location Set ✓` : 'Set Kitchen Location', action: handleSetLocation },
     { icon: 'language-outline', label: `Language — ${currentLanguage === 'en' ? 'English' : 'العربية'}`, action: () => setShowLangModal(true) },
     { icon: themeMode === 'dark' ? 'moon' : themeMode === 'light' ? 'sunny' : 'contrast-outline', label: `Theme — ${themeMode === 'system' ? 'System' : themeMode === 'dark' ? 'Dark' : 'Light'}`, action: () => setShowThemeModal(true) },
     { icon: 'information-circle-outline', label: 'About HomeChef', action: () => infoAlert('HomeChef', 'A marketplace connecting home cooks with local customers.\n\nVersion 1.0.0') },

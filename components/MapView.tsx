@@ -106,9 +106,11 @@ export function MapView({
   <div id="map"></div>
   <script>
     var map = L.map('map', {
-      zoomControl: false,
+      zoomControl: true,
       scrollWheelZoom: true
     }).setView([${center[0]}, ${center[1]}], 14);
+
+    L.control.zoom({ position: 'topright' }).addTo(map);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
