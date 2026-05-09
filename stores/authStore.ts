@@ -180,28 +180,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (profile) {
       set({ profile: profile as UserProfile });
     } else if (user.email) {
-      // Auto-create profile for OAuth users (Google) who don't have one yet
-      const meta = user.user_metadata || {};
-      // Read role from localStorage (saved before Google OAuth redirect)
+      // Check if a role was explicitly chosen before OAuth redirect (from signup page)
       let savedRole: string | null = null;
       if (typeof window !== 'undefined') {
         savedRole = localStorage.getItem('homechef_google_role');
-        localStorage.removeItem('homechef_google_role'); // Clean up after use
+        if (savedRole) localStorage.removeItem('homechef_google_role');
       }
-      const role = savedRole || meta.role || 'customer';
-      const newProfile = {
-        id: user.id,
-        full_name: meta.full_name || meta.name || user.email.split('@')[0],
-        email: user.email,
-        phone: meta.phone || '',
-        role,
-        is_verified: true,
-        is_active: true,
-      };
-      const { error } = await supabase.from('users').upsert(newProfile, { onConflict: 'id' });
-      if (!error) {
-        set({ profile: newProfile as UserProfile });
+
+      if (savedRole) {
+        // Role was chosen on signup page → auto-create profile with that role
+        const meta = user.user_metadata || {};
+        const newProfile = {
+          id: user.id,
+          full_name: meta.full_name || meta.name || user.email.split('@')[0],
+          email: user.email,
+          phone: meta.phone || '',
+          role: savedRole,
+          is_verified: true,
+          is_active: true,
+        };
+        const { error } = await supabase.from('users').upsert(newProfile, { onConflict: 'id' });
+        if (!error) {
+          set({ profile: newProfile as UserProfile });
+        }
       }
+      // If no savedRole → profile stays null → _layout.tsx will redirect to role-selection
     }
   },
 

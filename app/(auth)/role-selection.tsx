@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-nati
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
+import { supabase } from '@/lib/supabase';
 import { Button, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -40,13 +41,41 @@ const roles = [
 export default function RoleSelectionScreen() {
   const router = useRouter();
   const { colors, spacing, rounded, shadows } = useTheme();
-  const { setSelectedRole } = useAuthStore();
+  const { setSelectedRole, session, user, fetchProfile } = useAuthStore();
   const [selected, setSelected] = useState<Role | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!selected) return;
     setSelectedRole(selected);
-    router.push('/(auth)/signup');
+
+    // If user is already authenticated (Google OAuth from login page),
+    // create their profile now and go directly to the app
+    if (session && user) {
+      setIsLoading(true);
+      const meta = user.user_metadata || {};
+      const newProfile = {
+        id: user.id,
+        full_name: meta.full_name || meta.name || user.email?.split('@')[0] || '',
+        email: user.email || '',
+        phone: meta.phone || '',
+        role: selected,
+        is_verified: true,
+        is_active: true,
+      };
+      await supabase.from('users').upsert(newProfile, { onConflict: 'id' });
+      await fetchProfile();
+      setIsLoading(false);
+
+      if (selected === 'chef') {
+        router.replace('/(chef)/onboarding');
+      } else {
+        router.replace('/(customer)/(tabs)/home');
+      }
+    } else {
+      // Not authenticated yet — go to normal signup form
+      router.push('/(auth)/signup');
+    }
   };
 
   return (
@@ -122,6 +151,7 @@ export default function RoleSelectionScreen() {
           title="Continue"
           onPress={handleContinue}
           disabled={!selected}
+          loading={isLoading}
           size="lg"
         />
 
