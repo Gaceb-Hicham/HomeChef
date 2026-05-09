@@ -137,6 +137,26 @@ export default function LoginScreen() {
             <Button title="Sign In" onPress={handleLogin} loading={isLoading} size="lg" />
           </View>
 
+          {/* Social Login */}
+          <View style={styles.dividerRow}>
+            <View style={[styles.dividerLine, { backgroundColor: colors.outlineVariant }]} />
+            <Text style={[styles.dividerText, { color: colors.outline }]}>or continue with</Text>
+            <View style={[styles.dividerLine, { backgroundColor: colors.outlineVariant }]} />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.googleBtn, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant }]}
+            onPress={async () => {
+              const { error } = await useAuthStore.getState().signInWithGoogle();
+              if (error) infoAlert('Google Sign-In', error);
+            }}
+          >
+            <Text style={{ fontSize: 20 }}>🔵</Text>
+            <Text style={{ color: colors.onSurface, fontWeight: '600', fontSize: 15, marginLeft: 10 }}>
+              Sign in with Google
+            </Text>
+          </TouchableOpacity>
+
           {/* Demo Mode — DEV only */}
           {__DEV__ && (
             <>
@@ -310,5 +330,14 @@ const styles = StyleSheet.create({
   demoSubtitle: {
     fontFamily: 'PlusJakartaSans-Regular',
     fontSize: 11,
+  },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    marginBottom: 8,
   },
 });

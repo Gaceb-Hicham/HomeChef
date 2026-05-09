@@ -47,11 +47,20 @@ export default function SignUpScreen() {
   const handleSignUp = async () => {
     if (!validate()) return;
     setIsLoading(true);
-    const { error } = await signUp(email, password, fullName, phone, selectedRole || 'customer');
+    const { error, autoConfirmed } = await signUp(email, password, fullName, phone, selectedRole || 'customer');
     setIsLoading(false);
     if (error) {
       infoAlert('Sign Up Failed', error);
+    } else if (autoConfirmed) {
+      // Email confirmation is disabled — user is auto-verified, skip OTP
+      const profile = useAuthStore.getState().profile;
+      if (profile?.role === 'chef') {
+        router.replace('/(chef)/onboarding');
+      } else {
+        router.replace('/(customer)/(tabs)/home');
+      }
     } else {
+      // Email confirmation enabled — go to OTP verification
       router.push({ pathname: '/(auth)/otp', params: { email, phone } });
     }
   };
@@ -163,14 +172,17 @@ export default function SignUpScreen() {
           <View style={styles.socialRow}>
             <TouchableOpacity
               style={[styles.socialButton, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}
-              onPress={() => infoAlert('Google Sign Up', 'Google authentication will be available soon. Please use email sign up for now.')}
+              onPress={async () => {
+                const { error } = await useAuthStore.getState().signInWithGoogle();
+                if (error) infoAlert('Google Sign Up', error);
+              }}
             >
               <Ionicons name="logo-google" size={22} color={colors.onSurface} />
               <Text style={[styles.socialText, { color: colors.onSurface }]}>Google</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.socialButton, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}
-              onPress={() => infoAlert('Apple Sign Up', 'Apple authentication will be available soon. Please use email sign up for now.')}
+              onPress={() => infoAlert('Apple Sign In', 'Apple Sign In requires an Apple Developer Account ($99/yr). Coming soon!')}
             >
               <Ionicons name="logo-apple" size={22} color={colors.onSurface} />
               <Text style={[styles.socialText, { color: colors.onSurface }]}>Apple</Text>

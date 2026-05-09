@@ -34,8 +34,9 @@ interface AuthState {
   setHasSeenOnboarding: (seen: boolean) => void;
   setIsLoading: (loading: boolean) => void;
 
-  signUp: (email: string, password: string, fullName: string, phone: string, role: UserRole) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, fullName: string, phone: string, role: UserRole) => Promise<{ error: string | null; autoConfirmed: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   verifyOtp: (email: string, token: string) => Promise<{ error: string | null }>;
@@ -69,11 +70,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           data: { full_name: fullName, phone, role },
         },
       });
-      if (error) return { error: error.message };
+      if (error) return { error: error.message, autoConfirmed: false };
 
-      // Create user profile record
+      // Create or update user profile record (upsert to handle re-signups)
       if (data.user) {
-        const { error: profileError } = await supabase.from('users').insert({
+        const { error: profileError } = await supabase.from('users').upsert({
           id: data.user.id,
           full_name: fullName,
           email,
@@ -81,13 +82,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           role,
           is_verified: false,
           is_active: true,
-        });
-        if (profileError) return { error: profileError.message };
+        }, { onConflict: 'id' });
+        if (profileError) return { error: profileError.message, autoConfirmed: false };
       }
 
+      // Check if user was auto-confirmed (email confirmation disabled in Supabase)
+      const autoConfirmed = !!data.session;
+      if (autoConfirmed && data.user) {
+        set({ session: data.session, user: data.user });
+        await get().fetchProfile();
+      }
+
+      return { error: null, autoConfirmed };
+    } catch (e: any) {
+      return { error: e.message || 'An unexpected error occurred', autoConfirmed: false };
+    }
+  },
+
+  signInWithGoogle: async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+        },
+      });
+      if (error) return { error: error.message };
       return { error: null };
     } catch (e: any) {
-      return { error: e.message || 'An unexpected error occurred' };
+      return { error: e.message || 'Google sign-in failed' };
     }
   },
 
@@ -152,6 +175,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     if (profile) {
       set({ profile: profile as UserProfile });
+    } else if (user.email) {
+      // Auto-create profile for OAuth users (Google) who don't have one yet
+      const meta = user.user_metadata || {};
+      const newProfile = {
+        id: user.id,
+        full_name: meta.full_name || meta.name || user.email.split('@')[0],
+        email: user.email,
+        phone: meta.phone || '',
+        role: meta.role || 'customer',
+        is_verified: true,
+        is_active: true,
+      };
+      const { error } = await supabase.from('users').upsert(newProfile, { onConflict: 'id' });
+      if (!error) {
+        set({ profile: newProfile as UserProfile });
+      }
     }
   },
 
