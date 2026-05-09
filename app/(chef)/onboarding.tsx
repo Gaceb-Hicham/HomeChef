@@ -8,6 +8,8 @@ import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { useToast } from '@/components/ui/Toast';
 import { Ionicons } from '@expo/vector-icons';
 import { infoAlert } from '@/lib/crossAlert';
+import { pickImage, uploadKitchenCover } from '@/lib/storage';
+import { Image } from 'react-native';
 
 export default function ChefOnboardingScreen() {
   const router = useRouter();
@@ -23,6 +25,16 @@ export default function ChefOnboardingScreen() {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [coverUri, setCoverUri] = useState<string | null>(null);
+  const [coverBase64, setCoverBase64] = useState<string | null>(null);
+
+  const handlePickCover = async () => {
+    const { assets } = await pickImage({ aspect: [16, 9], quality: 0.8 });
+    if (assets && assets[0]) {
+      setCoverUri(assets[0].uri);
+      if (assets[0].base64) setCoverBase64(assets[0].base64);
+    }
+  };
 
   const handleGetLocation = async () => {
     setLocationStatus('loading');
@@ -91,8 +103,20 @@ export default function ChefOnboardingScreen() {
         const { chefApi } = require('@/lib');
         await chefApi.updateChefProfile(profile.id, { latitude, longitude });
       } catch (e) {
-        // Location columns may not exist yet — non-critical, skip silently
         console.log('Location save skipped (columns may not exist yet)');
+      }
+    }
+
+    // Step 3: Upload cover photo if selected
+    if (!error && coverBase64) {
+      try {
+        const result = await uploadKitchenCover(profile.id, coverBase64);
+        if (result.url) {
+          const { chefApi } = require('@/lib');
+          await chefApi.updateChefProfile(profile.id, { cover_photo_url: result.url });
+        }
+      } catch (e) {
+        console.log('Cover photo upload skipped');
       }
     }
 
@@ -117,10 +141,16 @@ export default function ChefOnboardingScreen() {
         </View>
 
         {/* Cover photo */}
-        <TouchableOpacity style={[styles.coverArea, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}
-          onPress={() => infoAlert('Cover Photo', 'Photo upload is available on mobile devices. You can add a cover photo later from Kitchen Settings.')}>
-          <Ionicons name="image-outline" size={28} color={colors.outline} />
-          <Text style={{ color: colors.outline, marginTop: 6, fontSize: 13 }}>Add Cover Photo (optional)</Text>
+        <TouchableOpacity style={[styles.coverArea, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant, overflow: 'hidden' }]}
+          onPress={handlePickCover}>
+          {coverUri ? (
+            <Image source={{ uri: coverUri }} style={{ width: '100%', height: '100%', borderRadius: 14 }} resizeMode="cover" />
+          ) : (
+            <>
+              <Ionicons name="image-outline" size={28} color={colors.outline} />
+              <Text style={{ color: colors.outline, marginTop: 6, fontSize: 13 }}>Tap to add Cover Photo (optional)</Text>
+            </>
+          )}
         </TouchableOpacity>
 
         <Input label="Kitchen Name *" placeholder="e.g. Mama's Kitchen" value={kitchenName}

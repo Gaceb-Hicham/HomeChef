@@ -23,12 +23,16 @@ INSERT INTO public.users (id, full_name, email, phone, role, city, area, is_veri
   ('cccc3333-cccc-cccc-cccc-cccccccccccc', 'Fatima Ziani', 'fatima@chef.com', '0555678901', 'chef', 'Algiers', 'Bab El Oued', true, true),
   ('dddd4444-dddd-dddd-dddd-dddddddddddd', 'Karim Belkacemi', 'karim@chef.com', '0556789012', 'chef', 'Oran', 'Centre', true, true);
 
--- Chef profiles
-INSERT INTO public.chef_profiles (user_id, kitchen_name, bio, specialty_tags, rating_average, total_reviews, total_orders_fulfilled, response_rate, is_open, delivery_radius_km) VALUES
-  ('aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Mama Sarah Kitchen', 'Traditional Algerian cuisine made with love. Specializing in couscous and tajines.', ARRAY['Couscous', 'Tajine', 'Traditional'], 4.8, 156, 342, 0.97, true, 5),
-  ('bbbb2222-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Sweet Ahmed', 'Artisan pastries and traditional Algerian desserts.', ARRAY['Baklava', 'Makrout', 'Pastries'], 4.6, 89, 201, 0.92, true, 3),
-  ('cccc3333-cccc-cccc-cccc-cccccccccccc', 'Fatima''s Fresh Kitchen', 'Fresh daily meals with seasonal ingredients.', ARRAY['Chorba', 'Salads', 'Healthy'], 4.9, 210, 450, 0.99, true, 7),
-  ('dddd4444-dddd-dddd-dddd-dddddddddddd', 'Karim Bakery', 'Freshly baked bread and traditional Algerian baked goods.', ARRAY['Bread', 'Bourek', 'Bakery'], 4.5, 67, 150, 0.88, false, 4);
+-- Add location columns if they don't exist
+ALTER TABLE public.chef_profiles ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
+ALTER TABLE public.chef_profiles ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
+
+-- Chef profiles (with real Algiers GPS coordinates)
+INSERT INTO public.chef_profiles (user_id, kitchen_name, bio, specialty_tags, rating_average, total_reviews, total_orders_fulfilled, response_rate, is_open, delivery_radius_km, latitude, longitude) VALUES
+  ('aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Mama Sarah Kitchen', 'Traditional Algerian cuisine made with love. Specializing in couscous and tajines.', ARRAY['Couscous', 'Tajine', 'Traditional'], 4.8, 156, 342, 0.97, true, 5, 36.7455, 3.0325),
+  ('bbbb2222-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Sweet Ahmed', 'Artisan pastries and traditional Algerian desserts.', ARRAY['Baklava', 'Makrout', 'Pastries'], 4.6, 89, 201, 0.92, true, 3, 36.7240, 3.0850),
+  ('cccc3333-cccc-cccc-cccc-cccccccccccc', 'Fatima''s Fresh Kitchen', 'Fresh daily meals with seasonal ingredients.', ARRAY['Chorba', 'Salads', 'Healthy'], 4.9, 210, 450, 0.99, true, 7, 36.7920, 3.0513),
+  ('dddd4444-dddd-dddd-dddd-dddddddddddd', 'Karim Bakery', 'Freshly baked bread and traditional Algerian baked goods.', ARRAY['Bread', 'Bourek', 'Bakery'], 4.5, 67, 150, 0.88, false, 4, 36.7660, 3.0540);
 
 -- Daily posts (today's specials)
 INSERT INTO public.daily_posts (chef_id, title, description, price, available_quantity, remaining_quantity, order_deadline, delivery_available, pickup_available, preorder_allowed, date) VALUES
