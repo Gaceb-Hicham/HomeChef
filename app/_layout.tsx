@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 import { supabase } from '@/lib/supabase';
@@ -18,6 +18,8 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const { setSession, fetchProfile, setIsLoading } = useAuthStore();
+  const router = useRouter();
+  const segments = useSegments();
 
   const [fontsLoaded] = useFonts({
     'NotoSerif-Regular': require('@expo-google-fonts/noto-serif/400Regular/NotoSerif_400Regular.ttf'),
@@ -28,11 +30,27 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    // Listen for auth state changes
+    // Listen for auth state changes (including OAuth callbacks)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       if (session) {
         await fetchProfile();
+
+        // Auto-navigate after OAuth sign-in (Google redirect)
+        if (event === 'SIGNED_IN') {
+          const profile = useAuthStore.getState().profile;
+          const inAuthGroup = segments[0] === '(auth)';
+          // Only navigate if user is still on auth screens
+          if (inAuthGroup || !segments[0]) {
+            setTimeout(() => {
+              if (profile?.role === 'chef') {
+                router.replace('/(chef)/(tabs)/dashboard');
+              } else {
+                router.replace('/(customer)/(tabs)/home');
+              }
+            }, 300);
+          }
+        }
       }
       setIsLoading(false);
     });

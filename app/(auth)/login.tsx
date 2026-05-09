@@ -151,7 +151,7 @@ export default function LoginScreen() {
               if (error) infoAlert('Google Sign-In', error);
             }}
           >
-            <Text style={{ fontSize: 20 }}>🔵</Text>
+            <Ionicons name="logo-google" size={20} color={colors.onSurface} />
             <Text style={{ color: colors.onSurface, fontWeight: '600', fontSize: 15, marginLeft: 10 }}>
               Sign in with Google
             </Text>
