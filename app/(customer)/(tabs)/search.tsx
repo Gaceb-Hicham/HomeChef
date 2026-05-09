@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { usePostsStore } from '@/stores/postsStore';
@@ -24,6 +24,26 @@ export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [nearbyChefs, setNearbyChefs] = useState<any[]>([]);
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
+
+  const toggleFilter = (f: string) => {
+    setActiveFilters(prev => {
+      const next = new Set(prev);
+      next.has(f) ? next.delete(f) : next.add(f);
+      return next;
+    });
+  };
+
+  // Apply filters to search results
+  const filteredResults = searchResults.filter((item: any) => {
+    if (activeFilters.has('under500') && item.price >= 500) return false;
+    if (activeFilters.has('500-1000') && (item.price < 500 || item.price > 1000)) return false;
+    if (activeFilters.has('1000+') && item.price < 1000) return false;
+    if (activeFilters.has('4stars') && (item.chef?.rating_average || 0) < 4) return false;
+    if (activeFilters.has('delivery') && !item.delivery_available) return false;
+    if (activeFilters.has('pickup') && !item.pickup_available) return false;
+    return true;
+  });
 
   useEffect(() => {
     loadNearbyChefs();
@@ -89,8 +109,29 @@ export default function SearchScreen() {
       </View>
 
       {isSearching ? (
-        /* Search results */
-        <FlatList data={searchResults} keyExtractor={(i: any) => i.id}
+        /* Filter chips */
+        <>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20, gap: 8, marginBottom: 12 }}>
+            {[
+              { key: 'under500', label: 'Under 500 DA', icon: 'pricetag-outline' },
+              { key: '500-1000', label: '500-1000 DA', icon: 'pricetag-outline' },
+              { key: '1000+', label: '1000+ DA', icon: 'pricetag-outline' },
+              { key: '4stars', label: '⭐ 4+', icon: 'star-outline' },
+              { key: 'delivery', label: '🚗 Delivery', icon: 'car-outline' },
+              { key: 'pickup', label: '🏠 Pickup', icon: 'storefront-outline' },
+            ].map((f) => (
+              <TouchableOpacity key={f.key} onPress={() => toggleFilter(f.key)}
+                style={[styles.filterChip, {
+                  backgroundColor: activeFilters.has(f.key) ? colors.primary : colors.surfaceContainerLow,
+                  borderColor: activeFilters.has(f.key) ? colors.primary : colors.outlineVariant,
+                }]}>
+                <Text style={{ color: activeFilters.has(f.key) ? '#fff' : colors.onSurfaceVariant, fontSize: 13, fontWeight: '600' }}>{f.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        {/* Search results */}
+        <FlatList data={filteredResults} keyExtractor={(i: any) => i.id}
           contentContainerStyle={{ paddingHorizontal: 20, gap: 10, paddingBottom: 24 }}
           ListEmptyComponent={
             <View style={{ alignItems: 'center', paddingTop: 40 }}>
@@ -115,6 +156,7 @@ export default function SearchScreen() {
             </TouchableOpacity>
           )}
         />
+        </>
       ) : (
         <FlatList
           data={[]}
@@ -187,6 +229,7 @@ const styles = StyleSheet.create({
   searchBar: { paddingTop: 8, marginBottom: 16 },
   searchInput: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderRadius: 14, borderWidth: 1, gap: 10 },
   input: { flex: 1, fontFamily: 'PlusJakartaSans-Regular', fontSize: 15 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   sectionTitle: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 17, fontWeight: '600' },
   tagsRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },

@@ -110,6 +110,48 @@ export default function EarningsScreen() {
           ))}
         </View>
 
+        {/* Top Dishes */}
+        <View style={[styles.chartCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.md }]}>
+          <Text style={[styles.chartTitle, { color: colors.onBackground }]}>🏆 Top Dishes</Text>
+          {currentEarnings?.orders && currentEarnings.orders.length > 0 ? (() => {
+            // Group by post title
+            const dishMap: Record<string, { title: string; count: number; revenue: number }> = {};
+            currentEarnings.orders.forEach((o: any) => {
+              const title = o.post?.title || o.post_id?.substring(0, 8) || 'Unknown';
+              if (!dishMap[title]) dishMap[title] = { title, count: 0, revenue: 0 };
+              dishMap[title].count += o.quantity;
+              dishMap[title].revenue += o.total_price;
+            });
+            const sorted = Object.values(dishMap).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+            const maxRevenue = Math.max(...sorted.map(d => d.revenue), 1);
+            return (
+              <View style={{ gap: 10 }}>
+                {sorted.map((d, i) => (
+                  <View key={d.title} style={{ gap: 4 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ color: colors.onSurface, fontWeight: '600', fontSize: 14, flex: 1 }}>
+                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`} {d.title}
+                      </Text>
+                      <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>{d.revenue.toLocaleString()} DA</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ flex: 1, height: 6, backgroundColor: colors.surfaceContainerHigh, borderRadius: 3, overflow: 'hidden' }}>
+                        <View style={{ width: `${(d.revenue / maxRevenue) * 100}%`, height: '100%', backgroundColor: colors.primary, borderRadius: 3 }} />
+                      </View>
+                      <Text style={{ color: colors.onSurfaceVariant, fontSize: 11 }}>{d.count} sold</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            );
+          })() : (
+            <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+              <Text style={{ fontSize: 28, marginBottom: 6 }}>📊</Text>
+              <Text style={{ color: colors.onSurfaceVariant, fontSize: 13 }}>No orders yet in this period</Text>
+            </View>
+          )}
+        </View>
+
         {/* Withdrawal CTA */}
         <TouchableOpacity style={[styles.withdrawBtn, { borderColor: colors.primary }]}
           onPress={() => infoAlert('Request Payout', total > 0 ? `You have ${total.toLocaleString()} DA available for payout. This feature will be available soon.` : 'No earnings available for payout yet.')}>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Platform, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
 import { useThemeStore } from '@/stores/themeStore';
 import { useToast } from '@/components/ui/Toast';
+import { pickImage, uploadKitchenCover } from '@/lib/storage';
 
 export default function ChefProfileScreen() {
   const { colors, shadows } = useTheme();
@@ -31,6 +32,8 @@ export default function ChefProfileScreen() {
   const [editRadius, setEditRadius] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
+  const [editCoverUri, setEditCoverUri] = useState<string | null>(null);
+  const [editCoverBase64, setEditCoverBase64] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile?.id) {
@@ -52,6 +55,16 @@ export default function ChefProfileScreen() {
     setEditTags((chefProfile?.specialty_tags || []).join(', '));
     setEditRadius(chefProfile?.delivery_radius_km?.toString() || '5');
     setShowEditModal(true);
+    setEditCoverUri(null);
+    setEditCoverBase64(null);
+  };
+
+  const handlePickCover = async () => {
+    const { assets } = await pickImage({ aspect: [16, 9], quality: 0.8 });
+    if (assets && assets[0]) {
+      setEditCoverUri(assets[0].uri);
+      if (assets[0].base64) setEditCoverBase64(assets[0].base64);
+    }
   };
 
   const handleSave = async () => {
@@ -63,13 +76,24 @@ export default function ChefProfileScreen() {
       specialty_tags: editTags.split(',').map(t => t.trim()).filter(Boolean),
       delivery_radius_km: parseInt(editRadius) || 5,
     });
+    // Upload cover photo if changed
+    if (!error && editCoverBase64 && profile?.id) {
+      try {
+        const result = await uploadKitchenCover(profile.id, editCoverBase64);
+        if (result.url) {
+          await chefApi.updateChefProfile(profile.id, { cover_photo_url: result.url });
+        }
+      } catch (e) {
+        console.log('Cover upload skipped');
+      }
+    }
     setIsSaving(false);
     if (error) {
       infoAlert('Error', error);
     } else {
       fetchProfile(profile.id);
       setShowEditModal(false);
-      infoAlert('Success', 'Kitchen settings updated!');
+      showToast('Kitchen settings updated!', 'success');
     }
   };
 
@@ -193,6 +217,20 @@ export default function ChefProfileScreen() {
                 <Ionicons name="close" size={24} color={colors.onSurface} />
               </TouchableOpacity>
             </View>
+            {/* Cover Photo Picker */}
+            <TouchableOpacity onPress={handlePickCover}
+              style={{ height: 100, borderRadius: 14, borderWidth: 2, borderStyle: 'dashed', borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow, alignItems: 'center', justifyContent: 'center', marginBottom: 16, overflow: 'hidden' }}>
+              {editCoverUri ? (
+                <Image source={{ uri: editCoverUri }} style={{ width: '100%', height: '100%', borderRadius: 12 }} resizeMode="cover" />
+              ) : chefProfile?.cover_photo_url ? (
+                <Image source={{ uri: chefProfile.cover_photo_url }} style={{ width: '100%', height: '100%', borderRadius: 12 }} resizeMode="cover" />
+              ) : (
+                <>
+                  <Ionicons name="image-outline" size={24} color={colors.outline} />
+                  <Text style={{ color: colors.outline, fontSize: 12, marginTop: 4 }}>Tap to set cover photo</Text>
+                </>
+              )}
+            </TouchableOpacity>
             <Input label="Kitchen Name" value={editKitchen} onChangeText={setEditKitchen} icon="storefront-outline" />
             <Input label="Bio" value={editBio} onChangeText={setEditBio} multiline numberOfLines={3} style={{ minHeight: 70, textAlignVertical: 'top' }} />
             <Input label="Specialty Tags (comma-separated)" placeholder="Algerian, Pastries, Bread" value={editTags} onChangeText={setEditTags} icon="pricetag-outline" />
