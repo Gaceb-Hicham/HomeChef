@@ -29,6 +29,9 @@ export default function CheckoutScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [address, setAddress] = useState('');
   const [showAddressInput, setShowAddressInput] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [promoApplied, setPromoApplied] = useState('');
 
   useEffect(() => {
     if (profile) {
@@ -37,6 +40,27 @@ export default function CheckoutScreen() {
   }, [profile]);
 
   const deliveryFee = deliveryType === 'delivery' ? 100 : 0;
+  const estimatedTime = deliveryType === 'delivery' ? '25-40 min' : '~15 min';
+
+  const applyPromo = () => {
+    const code = promoCode.trim().toUpperCase();
+    if (code === 'HOMECHEF10') {
+      const disc = Math.round(getSubtotal() * 0.1);
+      setPromoDiscount(disc);
+      setPromoApplied('10% off applied!');
+    } else if (code === 'WELCOME50') {
+      setPromoDiscount(50);
+      setPromoApplied('50 DA off applied!');
+    } else if (code === 'FREEDEL') {
+      setPromoDiscount(deliveryFee);
+      setPromoApplied('Free delivery applied!');
+    } else {
+      setPromoDiscount(0);
+      setPromoApplied('Invalid code');
+    }
+  };
+
+  const finalTotal = Math.max(0, getTotal() + deliveryFee - promoDiscount);
 
   const handlePlaceOrder = async () => {
     if (!profile?.id) {
@@ -161,6 +185,34 @@ export default function CheckoutScreen() {
           value={note} onChangeText={setNote} multiline numberOfLines={3}
           style={{ minHeight: 60, textAlignVertical: 'top' }} />
 
+        {/* Promo Code */}
+        <Text style={[styles.section, { color: colors.onBackground }]}>🏷️ Promo Code</Text>
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 6 }}>
+          <View style={{ flex: 1 }}>
+            <Input label="" placeholder="e.g. HOMECHEF10"
+              value={promoCode} onChangeText={setPromoCode} icon="pricetag-outline" />
+          </View>
+          <TouchableOpacity onPress={applyPromo}
+            style={[styles.promoBtn, { backgroundColor: colors.primary }]}>
+            <Text style={{ color: colors.onPrimary, fontWeight: '700', fontSize: 13 }}>Apply</Text>
+          </TouchableOpacity>
+        </View>
+        {promoApplied ? (
+          <Text style={{ color: promoDiscount > 0 ? '#16a34a' : colors.error, fontSize: 13, fontWeight: '600', marginBottom: 16 }}>
+            {promoDiscount > 0 ? '✅' : '❌'} {promoApplied}
+          </Text>
+        ) : null}
+
+        {/* Estimated Time */}
+        <View style={[styles.timeCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
+          <Ionicons name="timer-outline" size={22} color={colors.primary} />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={{ color: colors.onSurface, fontWeight: '600', fontSize: 14 }}>Estimated {deliveryType === 'delivery' ? 'Delivery' : 'Ready'} Time</Text>
+            <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 16, marginTop: 2 }}>{estimatedTime}</Text>
+          </View>
+          <Ionicons name="checkmark-circle" size={22} color="#16a34a" />
+        </View>
+
         {/* Summary */}
         <View style={[styles.summary, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
           <Text style={[styles.summaryTitle, { color: colors.onBackground }]}>{t('checkout.summary')}</Text>
@@ -176,9 +228,15 @@ export default function CheckoutScreen() {
               <Text style={[styles.sumPrice, { color: colors.onSurface }]}>{deliveryFee} DA</Text>
             </View>
           )}
+          {promoDiscount > 0 && (
+            <View style={styles.sumRow}>
+              <Text style={[styles.sumItem, { color: '#16a34a' }]}>🏷️ Promo Discount</Text>
+              <Text style={[styles.sumPrice, { color: '#16a34a' }]}>-{promoDiscount} DA</Text>
+            </View>
+          )}
           <View style={[styles.sumRow, { borderTopWidth: 1, borderTopColor: colors.outlineVariant, paddingTop: 10, marginTop: 6 }]}>
             <Text style={[styles.totalLabel, { color: colors.onBackground }]}>{t('cart.total')}</Text>
-            <Text style={[styles.totalValue, { color: colors.primary }]}>{getTotal() + deliveryFee} DA</Text>
+            <Text style={[styles.totalValue, { color: colors.primary }]}>{finalTotal} DA</Text>
           </View>
         </View>
       </ScrollView>
@@ -207,4 +265,6 @@ const styles = StyleSheet.create({
   sumPrice: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 14, fontWeight: '600' },
   totalLabel: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 16, fontWeight: '700' },
   totalValue: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 20, fontWeight: '700' },
+  promoBtn: { height: 50, paddingHorizontal: 20, borderRadius: 14, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end' },
+  timeCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 14, marginBottom: 20 },
 });

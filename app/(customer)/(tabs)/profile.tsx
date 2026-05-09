@@ -106,7 +106,7 @@ export default function ProfileScreen() {
     { icon: 'language-outline', label: `${t('profile.language')} — ${currentLanguage === 'en' ? 'English' : 'العربية'}`, action: () => setShowLangModal(true) },
     { icon: themeMode === 'dark' ? 'moon' : themeMode === 'light' ? 'sunny' : 'contrast-outline', label: `${currentLanguage === 'en' ? 'Theme' : 'المظهر'} — ${themeMode === 'system' ? (currentLanguage === 'en' ? 'System' : 'النظام') : themeMode === 'dark' ? (currentLanguage === 'en' ? 'Dark' : 'داكن') : (currentLanguage === 'en' ? 'Light' : 'فاتح')}`, action: () => setShowThemeModal(true) },
     { icon: 'map-outline', label: currentLanguage === 'en' ? 'Nearby Chefs Map' : 'خريطة الطباخين', route: '/(customer)/explore-map' },
-    { icon: 'information-circle-outline', label: t('profile.about'), action: () => setShowAboutModal(true) },
+    { icon: 'help-circle-outline', label: currentLanguage === 'en' ? 'Help & About' : 'المساعدة والمعلومات', route: '/(customer)/about' },
   ];
 
   const handleLogout = () => {

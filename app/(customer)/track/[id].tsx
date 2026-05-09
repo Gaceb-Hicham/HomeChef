@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking, Image } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useOrdersStore } from '@/stores/ordersStore';
@@ -158,15 +158,42 @@ export default function TrackOrderScreen() {
         </View>
 
         {/* Contact chef */}
-        <TouchableOpacity
-          onPress={() => {
-            const phone = currentOrder?.chef?.phone;
-            if (phone) Linking.openURL(`tel:${phone}`);
-          }}
-          style={[styles.contactBtn, { borderColor: colors.primary }]}>
-          <Ionicons name="call-outline" size={20} color={colors.primary} />
-          <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 15, marginLeft: 8 }}>{t('tracking.contact_chef')}</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+          <TouchableOpacity
+            onPress={() => {
+              const phone = currentOrder?.chef?.phone;
+              if (phone) Linking.openURL(`tel:${phone}`);
+            }}
+            style={[styles.contactBtn, { borderColor: colors.primary, flex: 1 }]}>
+            <Ionicons name="call-outline" size={20} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 14, marginLeft: 8 }}>{t('tracking.contact_chef')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push({
+              pathname: '/(customer)/chat',
+              params: { orderId: id, chefId: currentOrder?.chef_id, chefName: currentOrder?.chef?.full_name || 'Chef' },
+            })}
+            style={[styles.contactBtn, { borderColor: colors.primary, flex: 1 }]}>
+            <Ionicons name="chatbubble-outline" size={20} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 14, marginLeft: 8 }}>Chat</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* QR Code for pickup orders */}
+        {currentOrder?.delivery_type === 'pickup' && status === 'ready' && (
+          <View style={[styles.qrCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.md }]}>
+            <Text style={{ color: colors.onBackground, fontWeight: '700', fontSize: 16, marginBottom: 4 }}>📱 Pickup QR Code</Text>
+            <Text style={{ color: colors.onSurfaceVariant, fontSize: 12, marginBottom: 12 }}>Show this to the chef when you pick up</Text>
+            <View style={{ backgroundColor: '#fff', padding: 12, borderRadius: 12, alignItems: 'center' }}>
+              <Image
+                source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=HOMECHEF-ORDER-${id}` }}
+                style={{ width: 180, height: 180 }}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={{ color: colors.outline, fontSize: 11, marginTop: 8, textAlign: 'center' }}>Order #{id?.substring(0, 8)}</Text>
+          </View>
+        )}
 
         <View style={{ height: 32 }} />
       </ScrollView>
@@ -194,4 +221,5 @@ const styles = StyleSheet.create({
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
   infoValue: { fontFamily: 'PlusJakartaSans-Regular', fontSize: 14 },
   contactBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 14, borderRadius: 14, borderWidth: 1.5 },
+  qrCard: { borderRadius: 16, padding: 20, alignItems: 'center', marginBottom: 16 },
 });

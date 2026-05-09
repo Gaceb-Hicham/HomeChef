@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking, RefreshControl } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useOrdersStore } from '@/stores/ordersStore';
@@ -28,6 +29,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 
 export default function ChefOrdersScreen() {
   const { colors, shadows } = useTheme();
+  const router = useRouter();
   const profile = useAuthStore((s) => s.profile);
   const { chefOrders, fetchChefOrders, updateOrderStatus, isLoading } = useOrdersStore();
   const [activeTab, setActiveTab] = useState('All');
@@ -121,6 +123,13 @@ export default function ChefOrdersScreen() {
                 <Ionicons name="call-outline" size={16} color={colors.primary} />
               </TouchableOpacity>
             )}
+            <TouchableOpacity style={[styles.actionBtnOutline, { borderColor: colors.outlineVariant }]}
+              onPress={() => router.push({
+                pathname: '/(chef)/chat',
+                params: { orderId: item.id, customerId: item.customer_id, customerName: item.customer?.full_name || 'Customer' },
+              })}>
+              <Ionicons name="chatbubble-outline" size={16} color={colors.primary} />
+            </TouchableOpacity>
           </View>
         )}
       </View>

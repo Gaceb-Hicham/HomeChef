@@ -114,14 +114,26 @@ export default function ChefProfileScreen() {
             ))}
           </View>
 
-          {/* Follow button */}
-          <TouchableOpacity onPress={handleFollowToggle}
-            style={[styles.followBtn, { backgroundColor: isFollowing ? colors.surfaceContainerLow : colors.primary, borderColor: isFollowing ? colors.outlineVariant : colors.primary }]}>
-            <Ionicons name={isFollowing ? 'checkmark' : 'add'} size={18} color={isFollowing ? colors.onSurface : colors.onPrimary} />
-            <Text style={{ color: isFollowing ? colors.onSurface : colors.onPrimary, fontWeight: '600', fontSize: 14 }}>
-              {isFollowing ? 'Following' : 'Follow'}
-            </Text>
-          </TouchableOpacity>
+          {/* Follow & Share */}
+          <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
+            <TouchableOpacity onPress={handleFollowToggle}
+              style={[styles.followBtn, { backgroundColor: isFollowing ? colors.surfaceContainerLow : colors.primary, borderColor: isFollowing ? colors.outlineVariant : colors.primary }]}>
+              <Ionicons name={isFollowing ? 'checkmark' : 'add'} size={18} color={isFollowing ? colors.onSurface : colors.onPrimary} />
+              <Text style={{ color: isFollowing ? colors.onSurface : colors.onPrimary, fontWeight: '600', fontSize: 14 }}>
+                {isFollowing ? 'Following' : 'Follow'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => {
+              const text = `👨‍🍳 Check out ${kitchenName} on HomeChef!\n⭐ ${rating} rating • ${totalOrders} orders\n${bio}`;
+              if (typeof navigator !== 'undefined' && navigator.share) {
+                navigator.share({ title: kitchenName, text }).catch(() => {});
+              }
+            }}
+              style={[styles.followBtn, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}>
+              <Ionicons name="share-social-outline" size={18} color={colors.onSurface} />
+              <Text style={{ color: colors.onSurface, fontWeight: '600', fontSize: 14 }}>Share</Text>
+            </TouchableOpacity>
+          </View>
 
           <Text style={[styles.bio, { color: colors.onSurfaceVariant }]}>{bio}</Text>
 

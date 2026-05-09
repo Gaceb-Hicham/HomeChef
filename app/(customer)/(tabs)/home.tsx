@@ -8,6 +8,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { usePostsStore } from '@/stores/postsStore';
 import { useNotificationsStore } from '@/stores/appStores';
+import { useOrdersStore } from '@/stores/ordersStore';
 import { useRealtimeFeed } from '@/hooks/useRealtime';
 import { ScreenWrapper, PostImage, AvatarImage, FeedSkeleton } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +25,8 @@ export default function HomeScreen() {
   const profile = useAuthStore((s) => s.profile);
   const { feed, isLoading, isRefreshing, fetchFeed, refreshFeed, handleRealtimeUpdate } = usePostsStore();
   const unreadCount = useNotificationsStore((s) => s.unreadCount);
+  const { chefOrders, fetchChefOrders } = useOrdersStore();
+  const [pastOrders, setPastOrders] = useState<any[]>([]);
 
   const [activeCategory, setActiveCategory] = useState('All');
 
@@ -39,6 +42,20 @@ export default function HomeScreen() {
   useEffect(() => {
     if (profile?.id) {
       useNotificationsStore.getState().fetchUnreadCount(profile.id);
+    }
+  }, [profile?.id]);
+
+  // Fetch past orders for "Order Again"
+  useEffect(() => {
+    if (profile?.id) {
+      const loadPastOrders = async () => {
+        try {
+          const { ordersApi } = require('@/lib');
+          const { data } = await ordersApi.getCustomerOrders(profile.id);
+          if (data) setPastOrders(data.filter((o: any) => o.order_status === 'delivered').slice(0, 6));
+        } catch (e) {}
+      };
+      loadPastOrders();
     }
   }, [profile?.id]);
 
@@ -186,6 +203,34 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
+        {/* Order Again */}
+        {pastOrders.length > 0 && (
+          <>
+            <View style={[styles.sectionHeader, { paddingHorizontal: spacing.xl }]}>
+              <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>🔄 Order Again</Text>
+              <TouchableOpacity onPress={() => router.push('/(customer)/(tabs)/orders')}>
+                <Text style={[styles.seeAll, { color: colors.primary }]}>History</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: 12, marginBottom: 20 }}>
+              {pastOrders.map((o: any) => (
+                <TouchableOpacity key={o.id}
+                  onPress={() => router.push(`/(customer)/offer/${o.post_id}`)}
+                  style={[styles.reorderCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
+                  <Text style={{ fontSize: 24, marginBottom: 6 }}>🍽️</Text>
+                  <Text numberOfLines={1} style={{ color: colors.onSurface, fontWeight: '600', fontSize: 13, width: 100, textAlign: 'center' }}>
+                    {o.post?.title || 'Dish'}
+                  </Text>
+                  <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 12, marginTop: 4 }}>
+                    {o.total_price} DA
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        )}
+
         {/* Section title */}
         <View style={[styles.sectionHeader, { paddingHorizontal: spacing.xl }]}>
           <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>Today's Specials</Text>
@@ -236,6 +281,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontFamily: 'NotoSerif-Bold', fontSize: 20, fontWeight: '700' },
   seeAll: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 13, fontWeight: '600' },
   postCard: { borderRadius: 20, overflow: 'hidden' },
+  reorderCard: { width: 120, padding: 14, borderRadius: 16, alignItems: 'center' },
   postImage: { height: 180, alignItems: 'center', justifyContent: 'center', borderTopLeftRadius: 20, borderTopRightRadius: 20 },
   remainingBadge: { position: 'absolute', top: 12, right: 12, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   remainingText: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 11, fontWeight: '600' },

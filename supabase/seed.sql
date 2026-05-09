@@ -83,3 +83,35 @@ INSERT INTO public.followers (follower_id, chef_id) VALUES
   ('22222222-2222-2222-2222-222222222222', 'aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
   ('22222222-2222-2222-2222-222222222222', 'bbbb2222-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
   ('33333333-3333-3333-3333-333333333333', 'cccc3333-cccc-cccc-cccc-cccccccccccc');
+
+-- Create messages table if not exists
+CREATE TABLE IF NOT EXISTS public.messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id UUID NOT NULL,
+  sender_id UUID NOT NULL,
+  receiver_id UUID NOT NULL,
+  content TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create promo codes table if not exists
+CREATE TABLE IF NOT EXISTS public.promo_codes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT UNIQUE NOT NULL,
+  discount_type TEXT NOT NULL,
+  discount_value NUMERIC(10,2) NOT NULL,
+  min_order NUMERIC(10,2) DEFAULT 0,
+  max_uses INTEGER DEFAULT 100,
+  current_uses INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seed promo codes
+INSERT INTO public.promo_codes (code, discount_type, discount_value, min_order, is_active) VALUES
+  ('HOMECHEF10', 'percentage', 10, 300, true),
+  ('WELCOME50', 'fixed', 50, 200, true),
+  ('FREEDEL', 'free_delivery', 100, 0, true)
+ON CONFLICT (code) DO NOTHING;

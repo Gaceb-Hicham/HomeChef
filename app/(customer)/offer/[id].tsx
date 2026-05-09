@@ -94,6 +94,16 @@ export default function OfferDetailScreen() {
           <TouchableOpacity onPress={handleSave} style={[styles.saveBtn, { backgroundColor: 'rgba(0,0,0,0.3)' }]}>
             <Ionicons name={saved ? 'heart' : 'heart-outline'} size={22} color={saved ? '#ef4444' : '#fff'} />
           </TouchableOpacity>
+          <TouchableOpacity onPress={() => {
+            const text = `🍽️ ${post.title} — ${post.price} DA\n${post.description || ''}\nOrder on HomeChef!`;
+            if (typeof navigator !== 'undefined' && navigator.share) {
+              navigator.share({ title: post.title, text }).catch(() => {});
+            } else {
+              infoAlert('Share', text);
+            }
+          }} style={[styles.shareBtn, { backgroundColor: 'rgba(0,0,0,0.3)' }]}>
+            <Ionicons name="share-social-outline" size={20} color="#fff" />
+          </TouchableOpacity>
         </View>
 
         <View style={{ padding: 20 }}>
@@ -193,7 +203,8 @@ export default function OfferDetailScreen() {
 const styles = StyleSheet.create({
   hero: { height: 260, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   backBtn: { position: 'absolute', top: 16, left: 16, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  saveBtn: { position: 'absolute', top: 16, right: 16, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  saveBtn: { position: 'absolute', top: 12, right: 12, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  shareBtn: { position: 'absolute', top: 12, right: 60, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   remainingBadge: { position: 'absolute', top: 16, right: 64, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10 },
   title: { fontFamily: 'NotoSerif-Bold', fontSize: 26, fontWeight: '700', marginBottom: 4 },
   price: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 24, fontWeight: '700', marginBottom: 16 },

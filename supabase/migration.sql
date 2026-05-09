@@ -344,3 +344,48 @@ BEGIN
   END IF;
 END;
 $$ LANGUAGE plpgsql;
+
+-- ========================
+-- 13. MESSAGES TABLE (In-App Chat)
+-- ========================
+CREATE TABLE IF NOT EXISTS public.messages (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  order_id UUID REFERENCES public.orders(id) ON DELETE CASCADE NOT NULL,
+  sender_id UUID REFERENCES public.users(id) NOT NULL,
+  receiver_id UUID REFERENCES public.users(id) NOT NULL,
+  content TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can read own messages"
+  ON public.messages FOR SELECT
+  USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
+
+CREATE POLICY "Users can send messages"
+  ON public.messages FOR INSERT
+  WITH CHECK (auth.uid() = sender_id);
+
+-- ========================
+-- 14. PROMO CODES TABLE
+-- ========================
+CREATE TABLE IF NOT EXISTS public.promo_codes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code TEXT UNIQUE NOT NULL,
+  discount_type TEXT NOT NULL CHECK (discount_type IN ('percentage', 'fixed', 'free_delivery')),
+  discount_value NUMERIC(10,2) NOT NULL,
+  min_order NUMERIC(10,2) DEFAULT 0,
+  max_uses INTEGER DEFAULT 100,
+  current_uses INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.promo_codes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can read active promos"
+  ON public.promo_codes FOR SELECT
+  USING (is_active = true);
