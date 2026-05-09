@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Image, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
@@ -37,18 +37,42 @@ export default function CreatePostScreen() {
   const [selectedPhotos, setSelectedPhotos] = useState<{ uri: string; base64: string }[]>([]);
 
   const handlePickPhotos = async () => {
-    try {
-      const { assets, canceled } = await pickImage({ allowsMultipleSelection: true, aspect: [4, 3], quality: 0.7 });
-      if (!canceled && assets) {
-        const newPhotos = assets.slice(0, 5 - selectedPhotos.length).map((a: any) => ({
-          uri: a.uri,
-          base64: a.base64 || '',
-        }));
-        setSelectedPhotos([...selectedPhotos, ...newPhotos]);
+    if (Platform.OS === 'web') {
+      // Web: use native HTML file input for image upload
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.multiple = true;
+      input.onchange = async (e: any) => {
+        const files = Array.from(e.target.files || []) as File[];
+        const maxNew = 5 - selectedPhotos.length;
+        const newPhotos: { uri: string; base64: string }[] = [];
+        for (const file of files.slice(0, maxNew)) {
+          const reader = new FileReader();
+          const result = await new Promise<string>((resolve) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          });
+          const base64 = result.split(',')[1] || '';
+          const uri = result; 
+          newPhotos.push({ uri, base64 });
+        }
+        setSelectedPhotos((prev) => [...prev, ...newPhotos]);
+      };
+      input.click();
+    } else {
+      try {
+        const { assets, canceled } = await pickImage({ allowsMultipleSelection: true, aspect: [4, 3], quality: 0.7 });
+        if (!canceled && assets) {
+          const newPhotos = assets.slice(0, 5 - selectedPhotos.length).map((a: any) => ({
+            uri: a.uri,
+            base64: a.base64 || '',
+          }));
+          setSelectedPhotos([...selectedPhotos, ...newPhotos]);
+        }
+      } catch (e) {
+        infoAlert('Info', 'Photo upload failed. Please try again.');
       }
-    } catch (e) {
-      // Fallback for web — photos are optional
-      infoAlert('Info', 'Photo upload requires a native device. You can still publish without photos.');
     }
   };
 

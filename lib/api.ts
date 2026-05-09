@@ -23,7 +23,7 @@ export const postsApi = {
         chef:users!chef_id (
           id, full_name, profile_photo_url, city, area
         ),
-        chef_profile:chef_profiles!daily_posts_chef_id_fkey (
+        chef_profile:chef_profiles!daily_posts_chef_profile_fkey (
           kitchen_name, rating_average, total_reviews, is_open
         )
       `)
@@ -48,7 +48,7 @@ export const postsApi = {
         chef:users!chef_id (
           id, full_name, profile_photo_url, city
         ),
-        chef_profile:chef_profiles!daily_posts_chef_id_fkey (
+        chef_profile:chef_profiles!daily_posts_chef_profile_fkey (
           kitchen_name, rating_average, total_reviews
         ),
         reviews (
