@@ -43,7 +43,10 @@ export default function RootLayout() {
           // Only navigate if user is still on auth screens
           if (inAuthGroup || !segments[0]) {
             setTimeout(() => {
-              if (profile?.role === 'chef') {
+              if (!profile) {
+                // New Google user from login page — needs to pick role
+                router.replace('/(auth)/role-selection');
+              } else if (profile.role === 'chef') {
                 router.replace('/(chef)/(tabs)/dashboard');
               } else {
                 router.replace('/(customer)/(tabs)/home');

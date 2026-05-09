@@ -173,7 +173,7 @@ export default function SignUpScreen() {
             <TouchableOpacity
               style={[styles.socialButton, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}
               onPress={async () => {
-                const { error } = await useAuthStore.getState().signInWithGoogle();
+                const { error } = await useAuthStore.getState().signInWithGoogle(selectedRole || 'customer');
                 if (error) infoAlert('Google Sign Up', error);
               }}
             >

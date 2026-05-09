@@ -36,7 +36,7 @@ interface AuthState {
 
   signUp: (email: string, password: string, fullName: string, phone: string, role: UserRole) => Promise<{ error: string | null; autoConfirmed: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signInWithGoogle: () => Promise<{ error: string | null }>;
+  signInWithGoogle: (role?: UserRole) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   verifyOtp: (email: string, token: string) => Promise<{ error: string | null }>;
@@ -99,8 +99,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signInWithGoogle: async () => {
+  signInWithGoogle: async (role?: UserRole) => {
     try {
+      // Store the selected role before OAuth redirect (survives page reload)
+      if (role && typeof window !== 'undefined') {
+        localStorage.setItem('homechef_google_role', role);
+      }
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -178,12 +182,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } else if (user.email) {
       // Auto-create profile for OAuth users (Google) who don't have one yet
       const meta = user.user_metadata || {};
+      // Read role from localStorage (saved before Google OAuth redirect)
+      let savedRole: string | null = null;
+      if (typeof window !== 'undefined') {
+        savedRole = localStorage.getItem('homechef_google_role');
+        localStorage.removeItem('homechef_google_role'); // Clean up after use
+      }
+      const role = savedRole || meta.role || 'customer';
       const newProfile = {
         id: user.id,
         full_name: meta.full_name || meta.name || user.email.split('@')[0],
         email: user.email,
         phone: meta.phone || '',
-        role: meta.role || 'customer',
+        role,
         is_verified: true,
         is_active: true,
       };
