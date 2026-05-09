@@ -9,16 +9,18 @@ import { useAuthStore } from '@/stores/authStore';
 import { usePostsStore } from '@/stores/postsStore';
 import { useNotificationsStore } from '@/stores/appStores';
 import { useRealtimeFeed } from '@/hooks/useRealtime';
-import { ScreenWrapper, PostImage, AvatarImage } from '@/components/ui';
+import { ScreenWrapper, PostImage, AvatarImage, FeedSkeleton } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '@/hooks/useLanguage';
 
 const { width } = Dimensions.get('window');
 
-const CATEGORIES = ['All', '🍲 Meals', '🍰 Desserts', '🥗 Salads', '🍞 Bakery', '🥤 Drinks'];
+const CATEGORIES_EN = ['All', '🍲 Meals', '🍰 Desserts', '🥗 Salads', '🍞 Bakery', '🥤 Drinks'];
 
 export default function HomeScreen() {
   const router = useRouter();
   const { colors, shadows, spacing } = useTheme();
+  const { t } = useLanguage();
   const profile = useAuthStore((s) => s.profile);
   const { feed, isLoading, isRefreshing, fetchFeed, refreshFeed, handleRealtimeUpdate } = usePostsStore();
   const unreadCount = useNotificationsStore((s) => s.unreadCount);
@@ -56,10 +58,12 @@ export default function HomeScreen() {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (hour < 12) return t('home.good_morning');
+    if (hour < 17) return t('home.good_afternoon');
+    return t('home.good_evening');
   };
+
+  const CATEGORIES = CATEGORIES_EN;
 
   // Extract unique chefs from feed for story row
   const feedChefs = posts.reduce((acc: any[], p: any) => {
@@ -98,7 +102,7 @@ export default function HomeScreen() {
           <PostImage photos={item.photos} height={180} borderRadius={0} />
           <View style={[styles.remainingBadge, { backgroundColor: colors.tertiaryContainer }]}>
             <Text style={[styles.remainingText, { color: colors.onTertiaryContainer }]}>
-              {remaining} left
+              {remaining} {t('home.left')}
             </Text>
           </View>
         </View>
@@ -191,7 +195,11 @@ export default function HomeScreen() {
         </View>
 
         {/* Posts */}
-        {filteredPosts.length > 0 ? (
+        {isLoading && filteredPosts.length === 0 ? (
+          <View style={{ paddingHorizontal: spacing.xl }}>
+            <FeedSkeleton count={3} />
+          </View>
+        ) : filteredPosts.length > 0 ? (
           <FlatList data={filteredPosts} renderItem={renderPostCard} keyExtractor={(i: any) => i.id}
             scrollEnabled={false}
             contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: 16, paddingBottom: 24 }} />

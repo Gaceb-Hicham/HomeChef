@@ -1,18 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
+import { usePostsStore } from '@/stores/postsStore';
 import { postsApi } from '@/lib';
-import { ScreenWrapper, PostImage } from '@/components/ui';
+import { ScreenWrapper, PostImage, useToast } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { crossAlert } from '@/lib/crossAlert';
+import { useLanguage } from '@/hooks/useLanguage';
 
 export default function ArchiveScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
   const profile = useAuthStore((s) => s.profile);
+  const { deletePost } = usePostsStore();
+  const { showToast } = useToast();
+  const { t } = useLanguage();
   const [archive, setArchive] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (profile?.id) {
@@ -30,7 +37,53 @@ export default function ArchiveScreen() {
       // API error — show empty state
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadArchive();
+  };
+
+  const handleDelete = (postId: string, title: string) => {
+    crossAlert(
+      t('delete'),
+      `Delete "${title}"? This cannot be undone.`,
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('delete'),
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await deletePost(postId);
+            if (error) {
+              showToast(error, 'error');
+            } else {
+              setArchive((prev) => prev.filter((p) => p.id !== postId));
+              showToast('Post deleted', 'success');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleEdit = (item: any) => {
+    // Navigate to create-post with pre-filled data via query params
+    router.push({
+      pathname: '/(chef)/create-post',
+      params: {
+        editId: item.id,
+        editTitle: item.title,
+        editDescription: item.description || '',
+        editPrice: item.price?.toString() || '',
+        editQuantity: item.available_quantity?.toString() || '',
+        editCategory: item.category || '',
+        editDelivery: item.delivery_available ? '1' : '0',
+        editPickup: item.pickup_available ? '1' : '0',
+      },
+    });
   };
 
   if (loading) {
@@ -53,6 +106,7 @@ export default function ArchiveScreen() {
 
       <FlatList data={archive} keyExtractor={(i: any) => i.id} numColumns={2} columnWrapperStyle={{ gap: 12 }}
         contentContainerStyle={{ gap: 12 }} showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
         ListEmptyComponent={
           <View style={{ alignItems: 'center', paddingTop: 40 }}>
             <Text style={{ fontSize: 40 }}>📋</Text>
@@ -69,6 +123,16 @@ export default function ArchiveScreen() {
                 <Text style={[styles.cardDate, { color: colors.outline }]}>{new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
                 <Text style={[styles.cardOrders, { color: colors.onSurfaceVariant }]}>{item.available_quantity - item.remaining_quantity} sold</Text>
               </View>
+              {/* Action buttons */}
+              <View style={styles.actionRow}>
+                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.primaryFixed }]} onPress={() => handleEdit(item)}>
+                  <Ionicons name="create-outline" size={14} color={colors.primary} />
+                  <Text style={[styles.actionText, { color: colors.primary }]}>{t('edit')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#fee2e2' }]} onPress={() => handleDelete(item.id, item.title)}>
+                  <Ionicons name="trash-outline" size={14} color="#dc2626" />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         )}
@@ -81,11 +145,12 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, marginTop: 8 },
   title: { fontFamily: 'NotoSerif-Bold', fontSize: 22, fontWeight: '700' },
   card: { flex: 1, borderRadius: 14, overflow: 'hidden' },
-  cardImg: { height: 100, alignItems: 'center', justifyContent: 'center' },
   cardTitle: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 14, fontWeight: '600' },
   cardPrice: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, fontWeight: '700', marginTop: 2 },
   cardMeta: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   cardDate: { fontFamily: 'PlusJakartaSans-Regular', fontSize: 11 },
   cardOrders: { fontFamily: 'PlusJakartaSans-Regular', fontSize: 11 },
+  actionRow: { flexDirection: 'row', gap: 6, marginTop: 8 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  actionText: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 11, fontWeight: '600' },
 });
-

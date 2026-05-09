@@ -110,6 +110,16 @@ export const postsApi = {
 
     return { data: data || [], error: error?.message || null };
   },
+
+  /** Delete (deactivate) a post */
+  async deletePost(postId: string) {
+    const { error } = await supabase
+      .from('daily_posts')
+      .update({ is_active: false })
+      .eq('id', postId);
+
+    return { error: error?.message || null };
+  },
 };
 
 // ========================

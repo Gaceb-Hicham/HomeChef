@@ -6,6 +6,7 @@ import { useOrdersStore } from '@/stores/ordersStore';
 import { ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
+import { useLanguage } from '@/hooks/useLanguage';
 
 const { width } = Dimensions.get('window');
 
@@ -14,6 +15,7 @@ export default function EarningsScreen() {
   const profile = useAuthStore((s) => s.profile);
   const { dailyEarnings, weeklyEarnings, monthlyEarnings, fetchEarnings } = useOrdersStore();
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (profile?.id) fetchEarnings(profile.id);
@@ -44,16 +46,16 @@ export default function EarningsScreen() {
   const maxVal = Math.max(...chartData.map((d) => d.value), 1);
 
   const stats = [
-    { label: 'Total Revenue', value: `${total.toLocaleString()} DA`, icon: 'wallet', color: '#15803d', bg: '#dcfce7' },
-    { label: 'Orders Completed', value: count.toString(), icon: 'receipt', color: '#0369a1', bg: '#e0f2fe' },
-    { label: 'Avg per Order', value: count > 0 ? `${Math.round(total / count)} DA` : '-- DA', icon: 'trending-up', color: '#7c3aed', bg: '#ede9fe' },
-    { label: 'Payout Status', value: 'Pending', icon: 'card', color: '#b45309', bg: '#fef3c7' },
+    { label: t('earnings.total_revenue'), value: `${total.toLocaleString()} DA`, icon: 'wallet', color: '#15803d', bg: '#dcfce7' },
+    { label: t('earnings.orders_completed'), value: count.toString(), icon: 'receipt', color: '#0369a1', bg: '#e0f2fe' },
+    { label: t('earnings.avg_per_order'), value: count > 0 ? `${Math.round(total / count)} DA` : '-- DA', icon: 'trending-up', color: '#7c3aed', bg: '#ede9fe' },
+    { label: t('earnings.payout_status'), value: 'Pending', icon: 'card', color: '#b45309', bg: '#fef3c7' },
   ];
 
   return (
     <ScreenWrapper>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Text style={[styles.title, { color: colors.onBackground }]}>Earnings</Text>
+        <Text style={[styles.title, { color: colors.onBackground }]}>{t('earnings.title')}</Text>
 
         {/* Period selector */}
         <View style={[styles.periodRow, { backgroundColor: colors.surfaceContainerLow }]}>
@@ -61,7 +63,7 @@ export default function EarningsScreen() {
             <TouchableOpacity key={p} onPress={() => setPeriod(p)}
               style={[styles.periodTab, { backgroundColor: period === p ? colors.primary : 'transparent' }]}>
               <Text style={{ color: period === p ? colors.onPrimary : colors.onSurfaceVariant, fontSize: 13, fontWeight: '600', textTransform: 'capitalize' }}>
-                {p === 'day' ? 'Today' : p === 'week' ? 'This Week' : 'This Month'}
+                {p === 'day' ? t('earnings.today') : p === 'week' ? t('earnings.this_week') : t('earnings.this_month')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -78,7 +80,7 @@ export default function EarningsScreen() {
 
         {/* Bar chart */}
         <View style={[styles.chartCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.md }]}>
-          <Text style={[styles.chartTitle, { color: colors.onBackground }]}>Revenue Breakdown</Text>
+          <Text style={[styles.chartTitle, { color: colors.onBackground }]}>{t('earnings.revenue_breakdown')}</Text>
           <View style={styles.chartBars}>
             {chartData.map((d, i) => (
               <View key={i} style={styles.barCol}>
@@ -112,7 +114,7 @@ export default function EarningsScreen() {
         <TouchableOpacity style={[styles.withdrawBtn, { borderColor: colors.primary }]}
           onPress={() => infoAlert('Request Payout', total > 0 ? `You have ${total.toLocaleString()} DA available for payout. This feature will be available soon.` : 'No earnings available for payout yet.')}>
           <Ionicons name="download-outline" size={20} color={colors.primary} />
-          <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 15, marginLeft: 8 }}>Request Payout</Text>
+          <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 15, marginLeft: 8 }}>{t('earnings.request_payout')}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 24 }} />

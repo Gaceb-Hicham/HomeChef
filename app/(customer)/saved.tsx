@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useSavedStore } from '@/stores/appStores';
 import { ScreenWrapper, PostImage, AvatarImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '@/hooks/useLanguage';
 
 export default function SavedScreen() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function SavedScreen() {
   const profile = useAuthStore((s) => s.profile);
   const { savedDishes, savedChefs, fetchSaved, toggleSave } = useSavedStore();
   const [tab, setTab] = useState<'dishes' | 'chefs'>('dishes');
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (profile?.id) fetchSaved(profile.id);
@@ -27,17 +29,17 @@ export default function SavedScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.onSurface} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.onBackground }]}>Saved</Text>
+        <Text style={[styles.title, { color: colors.onBackground }]}>{t('saved.title')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
       {/* Tabs */}
       <View style={[styles.tabs, { paddingHorizontal: 20, marginBottom: 16 }]}>
-        {(['dishes', 'chefs'] as const).map((t) => (
-          <TouchableOpacity key={t} onPress={() => setTab(t)}
-            style={[styles.tab, { borderBottomColor: tab === t ? colors.primary : 'transparent' }]}>
-            <Text style={[styles.tabText, { color: tab === t ? colors.primary : colors.onSurfaceVariant }]}>
-              {t === 'dishes' ? `Dishes (${dishes.length})` : `Chefs (${chefs.length})`}
+        {(['dishes', 'chefs'] as const).map((tabKey) => (
+          <TouchableOpacity key={tabKey} onPress={() => setTab(tabKey)}
+            style={[styles.tab, { borderBottomColor: tab === tabKey ? colors.primary : 'transparent' }]}>
+            <Text style={[styles.tabText, { color: tab === tabKey ? colors.primary : colors.onSurfaceVariant }]}>
+              {tabKey === 'dishes' ? `${t('saved.dishes')} (${dishes.length})` : `${t('saved.chefs')} (${chefs.length})`}
             </Text>
           </TouchableOpacity>
         ))}

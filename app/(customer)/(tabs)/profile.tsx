@@ -6,16 +6,19 @@ import { useAuthStore } from '@/stores/authStore';
 import { useLanguage } from '@/hooks/useLanguage';
 import { savedApi, ordersApi } from '@/lib';
 import { supabase } from '@/lib/supabase';
-import { Button, Input, ScreenWrapper, AvatarImage } from '@/components/ui';
+import { Button, Input, ScreenWrapper, AvatarImage, ProfilePhotoUpload } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
+import { useThemeStore } from '@/stores/themeStore';
 
 export default function ProfileScreen() {
   const { colors, shadows } = useTheme();
   const router = useRouter();
   const { profile, signOut, updateProfile } = useAuthStore();
   const { t, currentLanguage, changeLanguage } = useLanguage();
+  const { mode: themeMode, setMode: setThemeMode, loadSavedMode } = useThemeStore();
   const [showLangModal, setShowLangModal] = useState(false);
+  const [showThemeModal, setShowThemeModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [editName, setEditName] = useState(profile?.full_name || '');
@@ -29,6 +32,7 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     if (profile?.id) loadStats();
+    loadSavedMode();
   }, [profile?.id]);
 
   const loadStats = async () => {
@@ -100,6 +104,7 @@ export default function ProfileScreen() {
     { icon: 'heart-outline', label: t('saved.title'), route: '/(customer)/saved' },
     { icon: 'notifications-outline', label: t('notifications.title'), route: '/(customer)/notifications' },
     { icon: 'language-outline', label: `${t('profile.language')} — ${currentLanguage === 'en' ? 'English' : 'العربية'}`, action: () => setShowLangModal(true) },
+    { icon: themeMode === 'dark' ? 'moon' : themeMode === 'light' ? 'sunny' : 'contrast-outline', label: `${currentLanguage === 'en' ? 'Theme' : 'المظهر'} — ${themeMode === 'system' ? (currentLanguage === 'en' ? 'System' : 'النظام') : themeMode === 'dark' ? (currentLanguage === 'en' ? 'Dark' : 'داكن') : (currentLanguage === 'en' ? 'Light' : 'فاتح')}`, action: () => setShowThemeModal(true) },
     { icon: 'map-outline', label: currentLanguage === 'en' ? 'Nearby Chefs Map' : 'خريطة الطباخين', route: '/(customer)/explore-map' },
     { icon: 'information-circle-outline', label: t('profile.about'), action: () => setShowAboutModal(true) },
   ];
@@ -116,9 +121,7 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Profile header */}
         <View style={styles.header}>
-          <View style={[styles.avatar, { backgroundColor: colors.primaryFixed }]}>
-            <AvatarImage uri={profile?.profile_photo_url} size={80} emoji="👤" />
-          </View>
+          <ProfilePhotoUpload size={80} showLabel={false} />
           <Text style={[styles.name, { color: colors.onBackground }]}>{profile?.full_name || 'Guest User'}</Text>
           <Text style={[styles.email, { color: colors.onSurfaceVariant }]}>{profile?.email || 'guest@homechef.app'}</Text>
           {profile?.city && (
@@ -211,6 +214,38 @@ export default function ProfileScreen() {
                   {lang.label}
                 </Text>
                 {currentLanguage === lang.code && (
+                  <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Theme Modal */}
+      <Modal visible={showThemeModal} transparent animationType="fade">
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowThemeModal(false)}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surfaceContainerLowest, ...shadows.lg }]}>
+            <Text style={[styles.modalTitle, { color: colors.onBackground }]}>
+              {currentLanguage === 'en' ? 'Theme' : 'المظهر'}
+            </Text>
+
+            {([
+              { mode: 'system' as const, label: currentLanguage === 'en' ? 'System Default' : 'النظام', icon: 'contrast-outline' },
+              { mode: 'light' as const, label: currentLanguage === 'en' ? 'Light' : 'فاتح', icon: 'sunny-outline' },
+              { mode: 'dark' as const, label: currentLanguage === 'en' ? 'Dark' : 'داكن', icon: 'moon-outline' },
+            ]).map((opt) => (
+              <TouchableOpacity key={opt.mode}
+                onPress={() => { setThemeMode(opt.mode); setShowThemeModal(false); }}
+                style={[styles.langOption, {
+                  backgroundColor: themeMode === opt.mode ? colors.primaryFixed : 'transparent',
+                  borderColor: themeMode === opt.mode ? colors.primary : colors.outlineVariant,
+                }]}>
+                <Ionicons name={opt.icon as any} size={24} color={themeMode === opt.mode ? colors.primary : colors.onSurfaceVariant} />
+                <Text style={[styles.langLabel, { color: themeMode === opt.mode ? colors.primary : colors.onSurface }]}>
+                  {opt.label}
+                </Text>
+                {themeMode === opt.mode && (
                   <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
                 )}
               </TouchableOpacity>

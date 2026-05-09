@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 
 interface MapViewProps {
@@ -21,7 +21,8 @@ interface MapViewProps {
 }
 
 /**
- * Web-only MapView — styled visualization (no native maps dependency)
+ * Web MapView — Real interactive map using Leaflet + OpenStreetMap.
+ * No API key required. Loads Leaflet via CDN inside an iframe.
  */
 export function MapView({
   chefLocation,
@@ -33,101 +34,199 @@ export function MapView({
   markers = [],
 }: MapViewProps) {
   const { colors } = useTheme();
-  const [dots, setDots] = useState<Array<{ x: number; y: number; type: string; label: string }>>([]);
 
-  useEffect(() => {
-    const newDots: typeof dots = [];
+  const center = chefLocation
+    ? [chefLocation.latitude, chefLocation.longitude]
+    : [36.7538, 3.0588]; // Default: Algiers
+
+  const html = useMemo(() => {
+    const markerData: Array<{ lat: number; lng: number; label: string; emoji: string; color: string }> = [];
 
     if (chefLocation) {
-      newDots.push({ x: 45 + Math.random() * 10, y: 35 + Math.random() * 10, type: 'chef', label: '👨‍🍳' });
+      markerData.push({
+        lat: chefLocation.latitude,
+        lng: chefLocation.longitude,
+        label: chefLocation.name || 'Chef',
+        emoji: '👨‍🍳',
+        color: '#8d4b00',
+      });
     }
     if (customerLocation) {
-      newDots.push({ x: 55 + Math.random() * 10, y: 55 + Math.random() * 10, type: 'customer', label: '📍' });
+      markerData.push({
+        lat: customerLocation.latitude,
+        lng: customerLocation.longitude,
+        label: 'You',
+        emoji: '📍',
+        color: '#0369a1',
+      });
     }
     if (deliveryLocation) {
-      newDots.push({ x: 50 + Math.random() * 10, y: 45 + Math.random() * 10, type: 'delivery', label: '🛵' });
+      markerData.push({
+        lat: deliveryLocation.latitude,
+        lng: deliveryLocation.longitude,
+        label: 'Delivery',
+        emoji: '🛵',
+        color: '#15803d',
+      });
     }
-
-    markers.forEach((m, i) => {
-      newDots.push({
-        x: 20 + (i * 15) % 60 + Math.random() * 10,
-        y: 20 + (i * 20) % 60 + Math.random() * 10,
-        type: m.type,
-        label: m.type === 'chef' ? '👨‍🍳' : '📍',
+    markers.forEach((m) => {
+      markerData.push({
+        lat: m.latitude,
+        lng: m.longitude,
+        label: m.title,
+        emoji: m.type === 'chef' ? '👨‍🍳' : m.type === 'delivery' ? '🛵' : '📍',
+        color: m.type === 'chef' ? '#8d4b00' : m.type === 'delivery' ? '#15803d' : '#0369a1',
       });
     });
 
-    if (newDots.length === 0) {
-      newDots.push(
-        { x: 40, y: 35, type: 'chef', label: '👨‍🍳' },
-        { x: 60, y: 55, type: 'customer', label: '📍' },
-      );
+    // Route polyline data
+    const routeCoords = showRoute && chefLocation && (deliveryLocation || customerLocation)
+      ? JSON.stringify([
+          [chefLocation.latitude, chefLocation.longitude],
+          [(deliveryLocation || customerLocation)!.latitude, (deliveryLocation || customerLocation)!.longitude],
+        ])
+      : 'null';
+
+    // Radius circle data
+    const radiusData = radiusKm && chefLocation
+      ? JSON.stringify({ lat: chefLocation.latitude, lng: chefLocation.longitude, radius: radiusKm * 1000 })
+      : 'null';
+
+    return `<!DOCTYPE html>
+<html><head>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    html,body,#map{width:100%;height:100%}
+    .leaflet-control-attribution{font-size:9px!important;opacity:0.6}
+  </style>
+</head><body>
+  <div id="map"></div>
+  <script>
+    var map = L.map('map', {
+      zoomControl: false,
+      scrollWheelZoom: true
+    }).setView([${center[0]}, ${center[1]}], 14);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+      maxZoom: 19
+    }).addTo(map);
+
+    var markers = ${JSON.stringify(markerData)};
+    var bounds = [];
+
+    markers.forEach(function(m) {
+      var icon = L.divIcon({
+        html: '<div style="font-size:22px;text-shadow:0 2px 4px rgba(0,0,0,0.3);text-align:center;line-height:32px">' + m.emoji + '</div>',
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -28],
+        className: ''
+      });
+      L.marker([m.lat, m.lng], { icon: icon })
+        .bindPopup('<div style="font-family:sans-serif;font-size:13px;font-weight:600;padding:2px">' + m.label + '</div>')
+        .addTo(map);
+      bounds.push([m.lat, m.lng]);
+    });
+
+    var route = ${routeCoords};
+    if (route) {
+      L.polyline(route, {
+        color: '#8d4b00',
+        weight: 3,
+        dashArray: '8,5',
+        opacity: 0.7
+      }).addTo(map);
     }
 
-    setDots(newDots);
-  }, [chefLocation, customerLocation, deliveryLocation, markers]);
+    var circle = ${radiusData};
+    if (circle) {
+      L.circle([circle.lat, circle.lng], {
+        radius: circle.radius,
+        color: 'rgba(141,75,0,0.3)',
+        fillColor: 'rgba(141,75,0,0.08)',
+        fillOpacity: 0.5,
+        weight: 1.5
+      }).addTo(map);
+    }
 
+    if (bounds.length > 1) {
+      map.fitBounds(L.latLngBounds(bounds), { padding: [40, 40], maxZoom: 15 });
+    } else if (bounds.length === 1) {
+      map.setView(bounds[0], 15);
+    }
+  <\/script>
+</body></html>`;
+  }, [chefLocation, customerLocation, deliveryLocation, showRoute, radiusKm, markers]);
+
+  // Web: render via iframe (native browser element, no extra packages)
   return (
-    <View style={[styles.webMap, { height, backgroundColor: colors.surfaceContainerHigh }]}>
-      {/* Grid lines */}
-      {[20, 40, 60, 80].map((p) => (
-        <View key={`h${p}`} style={[styles.gridLine, styles.gridH, { top: `${p}%`, backgroundColor: colors.outlineVariant }]} />
-      ))}
-      {[20, 40, 60, 80].map((p) => (
-        <View key={`v${p}`} style={[styles.gridLine, styles.gridV, { left: `${p}%`, backgroundColor: colors.outlineVariant }]} />
-      ))}
-
-      {/* Radius circle */}
-      {radiusKm && (
-        <View style={[styles.radiusCircle, {
-          width: Math.min(height * 0.8, radiusKm * 40),
-          height: Math.min(height * 0.8, radiusKm * 40),
-          borderColor: 'rgba(141, 75, 0, 0.25)',
-          backgroundColor: 'rgba(141, 75, 0, 0.06)',
-        }]} />
-      )}
-
-      {/* Route dashed line */}
-      {showRoute && dots.length >= 2 && (
-        <View style={[styles.routeLine, { backgroundColor: colors.primary }]} />
-      )}
-
-      {/* Dots */}
-      {dots.map((d, i) => (
-        <View key={i} style={[styles.mapDot, { left: `${d.x}%`, top: `${d.y}%` }]}>
-          <Text style={{ fontSize: 20 }}>{d.label}</Text>
-        </View>
-      ))}
-
-      {/* Label */}
-      <View style={[styles.mapLabel, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-        <Text style={styles.mapLabelText}>
-          {showRoute ? '🗺️ Live Tracking' : radiusKm ? `📍 ${radiusKm}km radius` : '🗺️ Map View'}
-        </Text>
-      </View>
+    <View style={[styles.container, { height, borderRadius: 16, overflow: 'hidden' }]}>
+      {/* @ts-ignore — iframe is valid on web */}
+      <iframe
+        srcDoc={html}
+        style={{
+          width: '100%',
+          height: '100%',
+          border: 'none',
+          borderRadius: 16,
+        }}
+        title="HomeChef Map"
+        sandbox="allow-scripts"
+      />
     </View>
   );
 }
 
-/** Mini map for inline use */
-export function MiniMapView({ size = 80 }: { latitude: number; longitude: number; size?: number }) {
-  const { colors } = useTheme();
+/** Mini map for inline use (e.g. chef profile cards) */
+export function MiniMapView({ latitude, longitude, size = 80 }: {
+  latitude: number;
+  longitude: number;
+  size?: number;
+}) {
+  const html = useMemo(() => `<!DOCTYPE html>
+<html><head>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+  <style>*{margin:0;padding:0}#map{width:100%;height:100%}</style>
+</head><body>
+  <div id="map"></div>
+  <script>
+    var map = L.map('map', {
+      zoomControl: false,
+      attributionControl: false,
+      dragging: false,
+      scrollWheelZoom: false
+    }).setView([${latitude}, ${longitude}], 15);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19
+    }).addTo(map);
+    var icon = L.divIcon({
+      html: '<div style="font-size:20px;text-align:center;line-height:28px">📍</div>',
+      iconSize: [28, 28], iconAnchor: [14, 28], className: ''
+    });
+    L.marker([${latitude}, ${longitude}], { icon: icon }).addTo(map);
+  <\/script>
+</body></html>`, [latitude, longitude]);
+
   return (
-    <View style={[styles.miniMap, { width: size, height: size, backgroundColor: colors.surfaceContainerHigh }]}>
-      <Text style={{ fontSize: 24 }}>📍</Text>
+    <View style={[styles.miniMap, { width: size, height: size }]}>
+      {/* @ts-ignore */}
+      <iframe
+        srcDoc={html}
+        style={{ width: '100%', height: '100%', border: 'none', borderRadius: 10 }}
+        title="Mini Map"
+        sandbox="allow-scripts"
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  webMap: { borderRadius: 16, overflow: 'hidden', position: 'relative' },
-  gridLine: { position: 'absolute', opacity: 0.3 },
-  gridH: { left: 0, right: 0, height: 0.5 },
-  gridV: { top: 0, bottom: 0, width: 0.5 },
-  radiusCircle: { position: 'absolute', borderRadius: 999, borderWidth: 1.5, top: '50%', left: '50%', transform: [{ translateX: '-50%' }, { translateY: '-50%' }] },
-  routeLine: { position: 'absolute', top: '40%', left: '35%', width: '30%', height: 2, opacity: 0.4, transform: [{ rotate: '30deg' }] },
-  mapDot: { position: 'absolute', transform: [{ translateX: -10 }, { translateY: -10 }] },
-  mapLabel: { position: 'absolute', bottom: 10, left: 10, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
-  mapLabelText: { color: '#fff', fontSize: 11, fontWeight: '600' },
-  miniMap: { borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  container: { overflow: 'hidden' },
+  miniMap: { borderRadius: 10, overflow: 'hidden' },
 });

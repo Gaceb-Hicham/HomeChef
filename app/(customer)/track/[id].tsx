@@ -7,6 +7,7 @@ import { useRealtimeOrder } from '@/hooks/useRealtime';
 import { MapView } from '@/components/MapView';
 import { ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '@/hooks/useLanguage';
 
 const STEPS = [
   { key: 'received', label: 'Order Received', icon: 'receipt-outline', desc: 'Your order has been confirmed' },
@@ -22,6 +23,7 @@ export default function TrackOrderScreen() {
   const { colors, shadows } = useTheme();
   const { currentOrder, fetchOrderById } = useOrdersStore();
   const [status, setStatus] = useState('preparing');
+  const { t } = useLanguage();
 
   // Fetch order details
   useEffect(() => {
@@ -60,7 +62,7 @@ export default function TrackOrderScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={colors.onSurface} />
           </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.onBackground }]}>Track Order</Text>
+          <Text style={[styles.title, { color: colors.onBackground }]}>{t('tracking.title')}</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -68,13 +70,13 @@ export default function TrackOrderScreen() {
         <View style={[styles.etaCard, { backgroundColor: colors.primaryFixed }]}>
           <Ionicons name="time-outline" size={22} color={colors.primary} />
           <View style={{ marginLeft: 12 }}>
-            <Text style={[styles.etaLabel, { color: colors.onSurfaceVariant }]}>Estimated Arrival</Text>
+            <Text style={[styles.etaLabel, { color: colors.onSurfaceVariant }]}>{t('tracking.eta')}</Text>
             <Text style={[styles.etaValue, { color: colors.primary }]}>{getETA()}</Text>
           </View>
           {status === 'out_for_delivery' && (
             <View style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <View style={[styles.liveDot, { backgroundColor: '#22c55e' }]} />
-              <Text style={{ color: '#15803d', fontSize: 12, fontWeight: '700' }}>LIVE</Text>
+              <Text style={{ color: '#15803d', fontSize: 12, fontWeight: '700' }}>{t('tracking.live')}</Text>
             </View>
           )}
         </View>
@@ -117,7 +119,7 @@ export default function TrackOrderScreen() {
                   </View>
                   {isCurrent && (
                     <View style={[styles.currentBadge, { backgroundColor: colors.primaryFixed }]}>
-                      <Text style={{ color: colors.primary, fontSize: 10, fontWeight: '700' }}>NOW</Text>
+                      <Text style={{ color: colors.primary, fontSize: 10, fontWeight: '700' }}>{t('tracking.now')}</Text>
                     </View>
                   )}
                 </View>
@@ -163,7 +165,7 @@ export default function TrackOrderScreen() {
           }}
           style={[styles.contactBtn, { borderColor: colors.primary }]}>
           <Ionicons name="call-outline" size={20} color={colors.primary} />
-          <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 15, marginLeft: 8 }}>Contact Chef</Text>
+          <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 15, marginLeft: 8 }}>{t('tracking.contact_chef')}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 32 }} />

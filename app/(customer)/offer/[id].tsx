@@ -9,6 +9,7 @@ import { useSavedStore } from '@/stores/appStores';
 import { ScreenWrapper, Button, PostImage, AvatarImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
+import { useToast } from '@/components/ui/Toast';
 
 
 
@@ -20,6 +21,7 @@ export default function OfferDetailScreen() {
   const { currentPost, fetchPostById, isLoading } = usePostsStore();
   const { addItem } = useCartStore();
   const { isSaved, toggleSave } = useSavedStore();
+  const { showToast } = useToast();
   const [qty, setQty] = useState(1);
   const [saved, setSaved] = useState(false);
 
@@ -74,10 +76,7 @@ export default function OfferDetailScreen() {
       const { updateQuantity } = useCartStore.getState();
       updateQuantity(id || post.id, qty);
     }
-    crossAlert('Added to Cart 🛒', `${qty}× ${post.title} added.`, [
-      { text: 'Continue Browsing', style: 'cancel' },
-      { text: 'View Cart', onPress: () => router.push('/(customer)/(tabs)/cart') },
-    ]);
+    showToast(`${qty}× ${post.title} added to cart 🛒`, 'success');
   };
 
   return (

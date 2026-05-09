@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Image } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { usePostsStore } from '@/stores/postsStore';
@@ -8,20 +8,30 @@ import { pickImage, uploadPostPhotos } from '@/lib/storage';
 import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
+import { useLanguage } from '@/hooks/useLanguage';
+import { useToast } from '@/components/ui/Toast';
 
 export default function CreatePostScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    editId?: string; editTitle?: string; editDescription?: string;
+    editPrice?: string; editQuantity?: string; editCategory?: string;
+    editDelivery?: string; editPickup?: string;
+  }>();
+  const isEditMode = !!params.editId;
   const { colors, shadows } = useTheme();
   const profile = useAuthStore((s) => s.profile);
-  const { createPost, isLoading: storeLoading } = usePostsStore();
+  const { createPost, updatePost, isLoading: storeLoading } = usePostsStore();
+  const { t } = useLanguage();
+  const { showToast } = useToast();
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
-  const [quantity, setQuantity] = useState('');
+  const [title, setTitle] = useState(params.editTitle || '');
+  const [description, setDescription] = useState(params.editDescription || '');
+  const [price, setPrice] = useState(params.editPrice || '');
+  const [quantity, setQuantity] = useState(params.editQuantity || '');
   const [deadline, setDeadline] = useState('14:00');
-  const [delivery, setDelivery] = useState(true);
-  const [pickup, setPickup] = useState(true);
+  const [delivery, setDelivery] = useState(params.editDelivery !== '0');
+  const [pickup, setPickup] = useState(params.editPickup !== '0');
   const [preorder, setPreorder] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState<{ uri: string; base64: string }[]>([]);
@@ -111,35 +121,58 @@ export default function CreatePostScreen() {
         photoUrls = urls;
       }
 
-      // Create deadline timestamp (today + time)
-      const today = new Date().toISOString().split('T')[0];
-      const deadlineTime = `${today}T${deadline}:00.000Z`;
+      if (isEditMode) {
+        // ── Edit mode: update existing post ──
+        const { error } = await updatePost(params.editId!, {
+          title: title.trim(),
+          description: description.trim() || null,
+          photos: photoUrls.length > 0 ? photoUrls : undefined,
+          price: parseInt(price),
+          available_quantity: parseInt(quantity),
+          delivery_available: delivery,
+          pickup_available: pickup,
+          preorder_allowed: preorder,
+        });
 
-      const { error } = await createPost({
-        chef_id: profile.id,
-        title: title.trim(),
-        description: description.trim() || null,
-        photos: photoUrls,
-        price: parseInt(price),
-        available_quantity: parseInt(quantity),
-        remaining_quantity: parseInt(quantity),
-        order_deadline: deadlineTime,
-        delivery_available: delivery,
-        pickup_available: pickup,
-        preorder_allowed: preorder,
-        is_active: true,
-        date: today,
-      });
+        clearTimeout(timeout);
+        setIsLoading(false);
 
-      clearTimeout(timeout);
-      setIsLoading(false);
-
-      if (error) {
-        infoAlert('Error', error);
+        if (error) {
+          infoAlert('Error', error);
+        } else {
+          showToast('Post updated successfully', 'success');
+          router.back();
+        }
       } else {
-        crossAlert('Published! 🎉', 'Your daily special is now live. All followers have been notified.', [
-          { text: 'Done', onPress: () => router.back() },
-        ]);
+        // ── Create mode: new post ──
+        const today = new Date().toISOString().split('T')[0];
+        const deadlineTime = `${today}T${deadline}:00.000Z`;
+
+        const { error } = await createPost({
+          chef_id: profile.id,
+          title: title.trim(),
+          description: description.trim() || null,
+          photos: photoUrls,
+          price: parseInt(price),
+          available_quantity: parseInt(quantity),
+          remaining_quantity: parseInt(quantity),
+          order_deadline: deadlineTime,
+          delivery_available: delivery,
+          pickup_available: pickup,
+          preorder_allowed: preorder,
+          is_active: true,
+          date: today,
+        });
+
+        clearTimeout(timeout);
+        setIsLoading(false);
+
+        if (error) {
+          infoAlert('Error', error);
+        } else {
+          showToast(t('create_post.published'), 'success');
+          router.back();
+        }
       }
     } catch (e: any) {
       clearTimeout(timeout);
@@ -155,7 +188,7 @@ export default function CreatePostScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="close" size={24} color={colors.onSurface} />
           </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.onBackground }]}>Post Special</Text>
+          <Text style={[styles.title, { color: colors.onBackground }]}>{isEditMode ? t('edit') + ' ' + t('create_post.dish_name') : t('create_post.title')}</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -164,7 +197,7 @@ export default function CreatePostScreen() {
           <TouchableOpacity onPress={handlePickPhotos}
             style={[styles.photoArea, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}>
             <Ionicons name="camera-outline" size={32} color={colors.outline} />
-            <Text style={{ color: colors.outline, marginTop: 8, fontSize: 14 }}>Add Photos (up to 5)</Text>
+            <Text style={{ color: colors.outline, marginTop: 8, fontSize: 14 }}>{t('create_post.add_photos')}</Text>
             <Text style={{ color: colors.outline, fontSize: 12 }}>Tap to upload from gallery</Text>
           </TouchableOpacity>
         ) : (
@@ -186,38 +219,38 @@ export default function CreatePostScreen() {
           </View>
         )}
 
-        <Input label="Dish Name *" placeholder="e.g. Couscous Royal" value={title} onChangeText={setTitle} icon="restaurant-outline" />
-        <Input label="Description" placeholder="Describe your dish..." value={description} onChangeText={setDescription}
+        <Input label={`${t('create_post.dish_name')} *`} placeholder="e.g. Couscous Royal" value={title} onChangeText={setTitle} icon="restaurant-outline" />
+        <Input label={t('create_post.description')} placeholder="Describe your dish..." value={description} onChangeText={setDescription}
           multiline numberOfLines={3} style={{ minHeight: 70, textAlignVertical: 'top' }} />
 
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <Input label="Price (DA) *" placeholder="850" value={price} onChangeText={setPrice} keyboardType="numeric" icon="pricetag-outline" />
+            <Input label={`${t('create_post.price')} *`} placeholder="850" value={price} onChangeText={setPrice} keyboardType="numeric" icon="pricetag-outline" />
           </View>
           <View style={{ flex: 1 }}>
-            <Input label="Quantity *" placeholder="15" value={quantity} onChangeText={setQuantity} keyboardType="numeric" icon="layers-outline" />
+            <Input label={`${t('create_post.quantity')} *`} placeholder="15" value={quantity} onChangeText={setQuantity} keyboardType="numeric" icon="layers-outline" />
           </View>
         </View>
 
-        <Input label="Order Deadline *" placeholder="14:00" value={deadline} onChangeText={setDeadline} icon="time-outline" />
+        <Input label={`${t('create_post.deadline')} *`} placeholder="14:00" value={deadline} onChangeText={setDeadline} icon="time-outline" />
 
         {/* Toggles */}
         <View style={[styles.toggleCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
           {[
-            { label: 'Delivery Available', value: delivery, onChange: setDelivery, icon: 'bicycle-outline' },
-            { label: 'Pickup Available', value: pickup, onChange: setPickup, icon: 'storefront-outline' },
-            { label: 'Allow Pre-orders', value: preorder, onChange: setPreorder, icon: 'calendar-outline' },
-          ].map((t, idx) => (
-            <View key={t.label} style={[styles.toggleRow, idx < 2 && { borderBottomColor: colors.outlineVariant, borderBottomWidth: 0.5 }]}>
-              <Ionicons name={t.icon as any} size={20} color={colors.onSurfaceVariant} />
-              <Text style={[styles.toggleLabel, { color: colors.onSurface }]}>{t.label}</Text>
-              <Switch value={t.value} onValueChange={t.onChange} trackColor={{ true: colors.primary, false: colors.outlineVariant }}
+            { label: t('create_post.delivery_available'), value: delivery, onChange: setDelivery, icon: 'bicycle-outline' },
+            { label: t('create_post.pickup_available'), value: pickup, onChange: setPickup, icon: 'storefront-outline' },
+            { label: t('create_post.allow_preorder'), value: preorder, onChange: setPreorder, icon: 'calendar-outline' },
+          ].map((toggle, idx) => (
+            <View key={toggle.label} style={[styles.toggleRow, idx < 2 && { borderBottomColor: colors.outlineVariant, borderBottomWidth: 0.5 }]}>
+              <Ionicons name={toggle.icon as any} size={20} color={colors.onSurfaceVariant} />
+              <Text style={[styles.toggleLabel, { color: colors.onSurface }]}>{toggle.label}</Text>
+              <Switch value={toggle.value} onValueChange={toggle.onChange} trackColor={{ true: colors.primary, false: colors.outlineVariant }}
                 thumbColor="#fff" />
             </View>
           ))}
         </View>
 
-        <Button title="Publish Special" onPress={handlePublish} loading={isLoading || storeLoading} size="lg" />
+        <Button title={isEditMode ? t('save') : t('create_post.publish')} onPress={handlePublish} loading={isLoading || storeLoading} size="lg" />
         <View style={{ height: 32 }} />
       </ScrollView>
     </ScreenWrapper>

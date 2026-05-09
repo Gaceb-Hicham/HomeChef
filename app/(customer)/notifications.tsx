@@ -7,6 +7,7 @@ import { useNotificationsStore } from '@/stores/appStores';
 import { useRealtimeNotifications } from '@/hooks/useRealtime';
 import { ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '@/hooks/useLanguage';
 
 const NOTIF_ICONS: Record<string, { icon: string; bg: string; color: string }> = {
   order: { icon: 'receipt', bg: '#e0f2fe', color: '#0369a1' },
@@ -23,6 +24,7 @@ export default function NotificationsScreen() {
   const { colors, shadows } = useTheme();
   const profile = useAuthStore((s) => s.profile);
   const { notifications, fetch, markAsRead, markAllAsRead, addNotification } = useNotificationsStore();
+  const { t } = useLanguage();
 
   // Fetch on mount
   useEffect(() => {
@@ -50,9 +52,9 @@ export default function NotificationsScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.onSurface} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.onBackground }]}>Notifications</Text>
+        <Text style={[styles.title, { color: colors.onBackground }]}>{t('notifications.title')}</Text>
         <TouchableOpacity onPress={() => profile?.id && markAllAsRead(profile.id)}>
-          <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Read all</Text>
+          <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>{t('notifications.read_all')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -84,7 +86,7 @@ export default function NotificationsScreen() {
         ListEmptyComponent={
           <View style={{ alignItems: 'center', paddingTop: 60 }}>
             <Text style={{ fontSize: 40 }}>🔔</Text>
-            <Text style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>No notifications yet</Text>
+            <Text style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>{t('notifications.empty')}</Text>
           </View>
         }
       />

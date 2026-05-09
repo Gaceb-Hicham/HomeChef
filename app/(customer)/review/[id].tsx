@@ -7,6 +7,8 @@ import { reviewsApi, ordersApi } from '@/lib';
 import { Button, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
+import { useLanguage } from '@/hooks/useLanguage';
+import { useToast } from '@/components/ui/Toast';
 
 export default function ReviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -20,6 +22,8 @@ export default function ReviewScreen() {
   const [comment, setComment] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [order, setOrder] = useState<any>(null);
+  const { t } = useLanguage();
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (id) loadOrder();
@@ -64,9 +68,8 @@ export default function ReviewScreen() {
     if (error) {
       infoAlert('Error', error);
     } else {
-      crossAlert('Thank You! 🎉', 'Your review has been submitted.', [
-        { text: 'Done', onPress: () => router.back() },
-      ]);
+      showToast(t('review.thanks'), 'success');
+      router.back();
     }
   };
 
@@ -76,7 +79,7 @@ export default function ReviewScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="close" size={24} color={colors.onSurface} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.onBackground }]}>Leave a Review</Text>
+        <Text style={[styles.title, { color: colors.onBackground }]}>{t('review.title')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -88,12 +91,12 @@ export default function ReviewScreen() {
         </Text>
       </View>
 
-      <StarRow label="Overall Rating *" value={overall} onChange={setOverall} />
-      <StarRow label="Taste" value={taste} onChange={setTaste} />
-      <StarRow label="Packaging" value={packaging} onChange={setPackaging} />
-      <StarRow label="Accuracy" value={accuracy} onChange={setAccuracy} />
+      <StarRow label={`${t('review.overall')} *`} value={overall} onChange={setOverall} />
+      <StarRow label={t('review.taste')} value={taste} onChange={setTaste} />
+      <StarRow label={t('review.packaging')} value={packaging} onChange={setPackaging} />
+      <StarRow label={t('review.accuracy')} value={accuracy} onChange={setAccuracy} />
 
-      <Text style={[styles.starLabel, { color: colors.onSurfaceVariant, marginTop: 4 }]}>Comment (optional)</Text>
+      <Text style={[styles.starLabel, { color: colors.onSurfaceVariant, marginTop: 4 }]}>{t('review.comment')}</Text>
       <TextInput
         value={comment}
         onChangeText={setComment}
@@ -105,7 +108,7 @@ export default function ReviewScreen() {
       />
 
       <View style={{ flex: 1 }} />
-      <Button title="Submit Review" onPress={handleSubmit} loading={isLoading} size="lg" disabled={overall === 0} />
+      <Button title={t('review.submit')} onPress={handleSubmit} loading={isLoading} size="lg" disabled={overall === 0} />
       <View style={{ height: 16 }} />
     </ScreenWrapper>
   );

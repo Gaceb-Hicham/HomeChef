@@ -38,6 +38,7 @@ interface PostsState {
   searchPosts: (query: string) => Promise<void>;
   createPost: (post: any) => Promise<{ error: string | null }>;
   updatePost: (postId: string, updates: any) => Promise<{ error: string | null }>;
+  deletePost: (postId: string) => Promise<{ error: string | null }>;
   handleRealtimeUpdate: (payload: any) => void;
   clearSearch: () => void;
 }
@@ -102,6 +103,17 @@ export const usePostsStore = create<PostsState>((set, get) => ({
       // Update local state
       set({
         feed: get().feed.map((p) => (p.id === postId ? { ...p, ...updates } : p)),
+      });
+    }
+    return { error };
+  },
+
+  deletePost: async (postId) => {
+    const { error } = await postsApi.deletePost(postId);
+    if (!error) {
+      set({
+        feed: get().feed.filter((p) => p.id !== postId),
+        chefArchive: get().chefArchive.filter((p) => p.id !== postId),
       });
     }
     return { error };

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking, RefreshControl } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useOrdersStore } from '@/stores/ordersStore';
 import { ScreenWrapper, Button, AvatarImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
+import { useLanguage } from '@/hooks/useLanguage';
 
 const STATUS_TABS = ['All', 'received', 'preparing', 'ready', 'out_for_delivery', 'delivered'];
 const STATUS_FLOW: Record<string, string> = {
@@ -30,6 +31,15 @@ export default function ChefOrdersScreen() {
   const profile = useAuthStore((s) => s.profile);
   const { chefOrders, fetchChefOrders, updateOrderStatus, isLoading } = useOrdersStore();
   const [activeTab, setActiveTab] = useState('All');
+  const { t } = useLanguage();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    if (!profile?.id) return;
+    setRefreshing(true);
+    await fetchChefOrders(profile.id);
+    setRefreshing(false);
+  };
 
   useEffect(() => {
     if (profile?.id) fetchChefOrders(profile.id);
@@ -120,7 +130,7 @@ export default function ChefOrdersScreen() {
   return (
     <ScreenWrapper padded={false}>
       <View style={{ paddingHorizontal: 20, paddingTop: 8, marginBottom: 12 }}>
-        <Text style={[styles.title, { color: colors.onBackground }]}>Orders</Text>
+        <Text style={[styles.title, { color: colors.onBackground }]}>{t('orders.title')}</Text>
       </View>
 
       {/* Status tabs */}
@@ -142,6 +152,7 @@ export default function ChefOrdersScreen() {
       {/* Orders list */}
       <FlatList data={filtered} renderItem={renderOrder} keyExtractor={(i: any) => i.id}
         contentContainerStyle={{ paddingHorizontal: 20, gap: 12, paddingBottom: 24 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         ListEmptyComponent={
           <View style={{ alignItems: 'center', paddingTop: 40 }}>
             <Text style={{ fontSize: 40 }}>📭</Text>

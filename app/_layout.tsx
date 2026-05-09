@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { initializePayments } from '@/lib/payments';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ToastProvider } from '@/components/ui/Toast';
 
 // Initialize i18n (side-effect import)
 import '@/i18n';
@@ -54,11 +55,13 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(customer)" options={{ headerShown: false }} />
-        <Stack.Screen name="(chef)" options={{ headerShown: false }} />
-      </Stack>
+      <ToastProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(customer)" options={{ headerShown: false }} />
+          <Stack.Screen name="(chef)" options={{ headerShown: false }} />
+        </Stack>
+      </ToastProvider>
     </ErrorBoundary>
   );
 }

@@ -5,23 +5,25 @@ import { useTheme } from '@/hooks/useTheme';
 import { useCartStore } from '@/stores/cartStore';
 import { Button, ScreenWrapper, PostImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '@/hooks/useLanguage';
 
 export default function CartScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
   const { items, updateQuantity, removeItem, getSubtotal, getTotal, promoDiscount } = useCartStore();
+  const { t } = useLanguage();
 
   if (items.length === 0) {
     return (
       <ScreenWrapper>
-        <Text style={[styles.title, { color: colors.onBackground }]}>My Cart</Text>
+        <Text style={[styles.title, { color: colors.onBackground }]}>{t('cart.title')}</Text>
         <View style={styles.empty}>
           <Text style={{ fontSize: 64, marginBottom: 16 }}>🛒</Text>
-          <Text style={[styles.emptyTitle, { color: colors.onSurface }]}>Your cart is empty</Text>
+          <Text style={[styles.emptyTitle, { color: colors.onSurface }]}>{t('cart.empty')}</Text>
           <Text style={[styles.emptySub, { color: colors.onSurfaceVariant }]}>
-            Browse today's specials and add something delicious
+            {t('cart.empty_subtitle')}
           </Text>
-          <Button title="Explore Food" onPress={() => router.push('/(customer)/(tabs)/home')}
+          <Button title={t('cart.browse')} onPress={() => router.push('/(customer)/(tabs)/home')}
             size="md" style={{ marginTop: 24 }} fullWidth={false} />
         </View>
       </ScreenWrapper>
@@ -30,7 +32,7 @@ export default function CartScreen() {
 
   return (
     <ScreenWrapper>
-      <Text style={[styles.title, { color: colors.onBackground }]}>My Cart</Text>
+      <Text style={[styles.title, { color: colors.onBackground }]}>{t('cart.title')}</Text>
       <FlatList data={items} keyExtractor={(i) => i.postId}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
@@ -57,7 +59,7 @@ export default function CartScreen() {
         ListFooterComponent={() => (
           <View style={[styles.summary, { borderTopColor: colors.outlineVariant }]}>
             <View style={styles.sumRow}>
-              <Text style={[styles.sumLabel, { color: colors.onSurfaceVariant }]}>Subtotal</Text>
+              <Text style={[styles.sumLabel, { color: colors.onSurfaceVariant }]}>{t('cart.subtotal')}</Text>
               <Text style={[styles.sumValue, { color: colors.onSurface }]}>{getSubtotal()} DA</Text>
             </View>
             {promoDiscount > 0 && (
@@ -67,10 +69,10 @@ export default function CartScreen() {
               </View>
             )}
             <View style={styles.sumRow}>
-              <Text style={[styles.totalLabel, { color: colors.onBackground }]}>Total</Text>
+              <Text style={[styles.totalLabel, { color: colors.onBackground }]}>{t('cart.total')}</Text>
               <Text style={[styles.totalValue, { color: colors.primary }]}>{getTotal()} DA</Text>
             </View>
-            <Button title="Proceed to Checkout" onPress={() => router.push('/(customer)/checkout')} size="lg" />
+            <Button title={t('cart.checkout')} onPress={() => router.push('/(customer)/checkout')} size="lg" />
           </View>
         )}
       />

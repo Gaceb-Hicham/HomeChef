@@ -7,9 +7,10 @@ import { useChefProfileStore } from '@/stores/appStores';
 import { useLanguage } from '@/hooks/useLanguage';
 import { chefApi, followersApi } from '@/lib';
 import { supabase } from '@/lib/supabase';
-import { Button, Input, ScreenWrapper, AvatarImage } from '@/components/ui';
+import { Button, Input, ScreenWrapper, AvatarImage, ProfilePhotoUpload } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
+import { useThemeStore } from '@/stores/themeStore';
 
 export default function ChefProfileScreen() {
   const { colors, shadows } = useTheme();
@@ -20,6 +21,8 @@ export default function ChefProfileScreen() {
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showLangModal, setShowLangModal] = useState(false);
+  const [showThemeModal, setShowThemeModal] = useState(false);
+  const { mode: themeMode, setMode: setThemeMode, loadSavedMode } = useThemeStore();
   const [editKitchen, setEditKitchen] = useState('');
   const [editBio, setEditBio] = useState('');
   const [editTags, setEditTags] = useState('');
@@ -78,6 +81,7 @@ export default function ChefProfileScreen() {
     { icon: 'storefront-outline', label: 'Kitchen Settings', action: openEdit },
     { icon: 'images-outline', label: 'Kitchen Archive', route: '/(chef)/archive' },
     { icon: 'language-outline', label: `Language — ${currentLanguage === 'en' ? 'English' : 'العربية'}`, action: () => setShowLangModal(true) },
+    { icon: themeMode === 'dark' ? 'moon' : themeMode === 'light' ? 'sunny' : 'contrast-outline', label: `Theme — ${themeMode === 'system' ? 'System' : themeMode === 'dark' ? 'Dark' : 'Light'}`, action: () => setShowThemeModal(true) },
     { icon: 'information-circle-outline', label: 'About HomeChef', action: () => infoAlert('HomeChef', 'A marketplace connecting home cooks with local customers.\n\nVersion 1.0.0') },
   ];
 
@@ -85,9 +89,7 @@ export default function ChefProfileScreen() {
     <ScreenWrapper>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <View style={[styles.avatar, { backgroundColor: colors.primaryFixed }]}>
-            <AvatarImage uri={profile?.profile_photo_url} size={80} emoji="👨‍🍳" />
-          </View>
+          <ProfilePhotoUpload size={80} showLabel={false} />
           <Text style={[styles.name, { color: colors.onBackground }]}>{profile?.full_name || 'Chef'}</Text>
           <Text style={[styles.kitchen, { color: colors.primary }]}>{chefProfile?.kitchen_name || 'My Kitchen'}</Text>
           <View style={styles.statRow}>
@@ -163,6 +165,31 @@ export default function ChefProfileScreen() {
                 <Text style={{ fontSize: 24 }}>{lang.flag}</Text>
                 <Text style={{ flex: 1, fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 16, fontWeight: '600', color: currentLanguage === lang.code ? colors.primary : colors.onSurface }}>{lang.label}</Text>
                 {currentLanguage === lang.code && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Theme Modal */}
+      <Modal visible={showThemeModal} transparent animationType="fade">
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowThemeModal(false)}>
+          <View style={[styles.langContent, { backgroundColor: colors.surfaceContainerLowest, ...shadows.lg }]}>
+            <Text style={[styles.modalTitle, { color: colors.onBackground }]}>Theme</Text>
+            {([
+              { mode: 'system' as const, label: 'System Default', icon: 'contrast-outline' },
+              { mode: 'light' as const, label: 'Light', icon: 'sunny-outline' },
+              { mode: 'dark' as const, label: 'Dark', icon: 'moon-outline' },
+            ]).map((opt) => (
+              <TouchableOpacity key={opt.mode}
+                onPress={() => { setThemeMode(opt.mode); setShowThemeModal(false); }}
+                style={[styles.langOption, {
+                  backgroundColor: themeMode === opt.mode ? colors.primaryFixed : 'transparent',
+                  borderColor: themeMode === opt.mode ? colors.primary : colors.outlineVariant,
+                }]}>
+                <Ionicons name={opt.icon as any} size={24} color={themeMode === opt.mode ? colors.primary : colors.onSurfaceVariant} />
+                <Text style={{ flex: 1, fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 16, fontWeight: '600', color: themeMode === opt.mode ? colors.primary : colors.onSurface }}>{opt.label}</Text>
+                {themeMode === opt.mode && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
               </TouchableOpacity>
             ))}
           </View>

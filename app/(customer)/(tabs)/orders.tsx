@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useOrdersStore } from '@/stores/ordersStore';
 import { ScreenWrapper, PostImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '@/hooks/useLanguage';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; icon: string }> = {
   received: { bg: '#e0f2fe', text: '#0369a1', icon: 'receipt' },
@@ -24,6 +25,15 @@ export default function OrdersScreen() {
   const profile = useAuthStore((s) => s.profile);
   const { activeOrders, pastOrders, fetchCustomerOrders, isLoading } = useOrdersStore();
   const [tab, setTab] = useState<'active' | 'past'>('active');
+  const { t } = useLanguage();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    if (!profile?.id) return;
+    setRefreshing(true);
+    await fetchCustomerOrders(profile.id);
+    setRefreshing(false);
+  };
 
   useEffect(() => {
     if (profile?.id) fetchCustomerOrders(profile.id);
@@ -83,7 +93,7 @@ export default function OrdersScreen() {
             <TouchableOpacity
               onPress={() => router.push(`/(customer)/review/${item.id}`)}
               style={[styles.reviewBtn, { borderColor: colors.primary }]}>
-              <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>Leave Review</Text>
+              <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>{t('orders.leave_review')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -94,16 +104,16 @@ export default function OrdersScreen() {
   return (
     <ScreenWrapper padded={false}>
       <View style={{ paddingHorizontal: 20, paddingTop: 8, marginBottom: 12 }}>
-        <Text style={[styles.title, { color: colors.onBackground }]}>My Orders</Text>
+        <Text style={[styles.title, { color: colors.onBackground }]}>{t('orders.title')}</Text>
       </View>
 
       {/* Tabs */}
       <View style={[styles.tabs, { paddingHorizontal: 20, marginBottom: 16 }]}>
-        {(['active', 'past'] as const).map((t) => (
-          <TouchableOpacity key={t} onPress={() => setTab(t)}
-            style={[styles.tab, { borderBottomColor: tab === t ? colors.primary : 'transparent' }]}>
-            <Text style={[styles.tabText, { color: tab === t ? colors.primary : colors.onSurfaceVariant }]}>
-              {t === 'active' ? `Active (${active.length})` : `Past (${past.length})`}
+        {(['active', 'past'] as const).map((tabKey) => (
+          <TouchableOpacity key={tabKey} onPress={() => setTab(tabKey)}
+            style={[styles.tab, { borderBottomColor: tab === tabKey ? colors.primary : 'transparent' }]}>
+            <Text style={[styles.tabText, { color: tab === tabKey ? colors.primary : colors.onSurfaceVariant }]}>
+              {tabKey === 'active' ? `${t('orders.active')} (${active.length})` : `${t('orders.past')} (${past.length})`}
             </Text>
           </TouchableOpacity>
         ))}
@@ -111,11 +121,12 @@ export default function OrdersScreen() {
 
       <FlatList data={data} renderItem={renderOrder} keyExtractor={(i: any) => i.id}
         contentContainerStyle={{ paddingHorizontal: 20, gap: 12, paddingBottom: 24 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         ListEmptyComponent={
           <View style={{ alignItems: 'center', paddingTop: 40 }}>
             <Text style={{ fontSize: 40 }}>📋</Text>
             <Text style={{ color: colors.onSurfaceVariant, marginTop: 8, fontSize: 15 }}>
-              {tab === 'active' ? 'No active orders' : 'No past orders yet'}
+              {tab === 'active' ? t('orders.no_active') : t('orders.no_past')}
             </Text>
           </View>
         }

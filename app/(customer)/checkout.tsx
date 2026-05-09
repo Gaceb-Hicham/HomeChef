@@ -8,6 +8,8 @@ import { useAuthStore } from '@/stores/authStore';
 import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
+import { useLanguage } from '@/hooks/useLanguage';
+import { useToast } from '@/components/ui/Toast';
 
 const TIME_SLOTS = ['12:00 - 12:30', '12:30 - 13:00', '13:00 - 13:30', '13:30 - 14:00'];
 
@@ -17,6 +19,8 @@ export default function CheckoutScreen() {
   const { items, getSubtotal, getTotal, clearCart, getItemsByChef } = useCartStore();
   const { placeOrder, isLoading: orderLoading } = useOrdersStore();
   const profile = useAuthStore((s) => s.profile);
+  const { t } = useLanguage();
+  const { showToast } = useToast();
 
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
   const [selectedSlot, setSelectedSlot] = useState(TIME_SLOTS[0]);
@@ -71,9 +75,8 @@ export default function CheckoutScreen() {
       await Promise.all(orderPromises);
       setIsLoading(false);
       clearCart();
-      crossAlert('🎉 Order Placed!', 'Your order has been confirmed. Track it in My Orders.', [
-        { text: 'View Orders', onPress: () => router.replace('/(customer)/(tabs)/orders') },
-      ]);
+      showToast(t('checkout.order_placed'), 'success', 4000);
+      router.replace('/(customer)/(tabs)/orders');
     } catch (e: any) {
       setIsLoading(false);
       infoAlert('Order Failed', e.message || 'Something went wrong. Please try again.');
@@ -87,19 +90,19 @@ export default function CheckoutScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={colors.onSurface} />
           </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.onBackground }]}>Checkout</Text>
+          <Text style={[styles.title, { color: colors.onBackground }]}>{t('checkout.title')}</Text>
           <View style={{ width: 24 }} />
         </View>
 
         {/* Delivery type */}
-        <Text style={[styles.section, { color: colors.onBackground }]}>Delivery Method</Text>
+        <Text style={[styles.section, { color: colors.onBackground }]}>{t('checkout.delivery_method')}</Text>
         <View style={styles.typeRow}>
-          {(['delivery', 'pickup'] as const).map((t) => (
-            <TouchableOpacity key={t} onPress={() => setDeliveryType(t)}
-              style={[styles.typeCard, { backgroundColor: deliveryType === t ? colors.primaryFixed : colors.surfaceContainerLow, borderColor: deliveryType === t ? colors.primary : colors.outlineVariant }]}>
-              <Ionicons name={t === 'delivery' ? 'bicycle' : 'storefront'} size={24} color={deliveryType === t ? colors.primary : colors.outline} />
-              <Text style={{ color: deliveryType === t ? colors.primary : colors.onSurfaceVariant, fontSize: 14, fontWeight: '600', marginTop: 6 }}>
-                {t === 'delivery' ? 'Delivery' : 'Pickup'}
+          {(['delivery', 'pickup'] as const).map((dtype) => (
+            <TouchableOpacity key={dtype} onPress={() => setDeliveryType(dtype)}
+              style={[styles.typeCard, { backgroundColor: deliveryType === dtype ? colors.primaryFixed : colors.surfaceContainerLow, borderColor: deliveryType === dtype ? colors.primary : colors.outlineVariant }]}>
+              <Ionicons name={dtype === 'delivery' ? 'bicycle' : 'storefront'} size={24} color={deliveryType === dtype ? colors.primary : colors.outline} />
+              <Text style={{ color: deliveryType === dtype ? colors.primary : colors.onSurfaceVariant, fontSize: 14, fontWeight: '600', marginTop: 6 }}>
+                {dtype === 'delivery' ? t('checkout.delivery') : t('checkout.pickup')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -108,12 +111,12 @@ export default function CheckoutScreen() {
         {/* Address */}
         {deliveryType === 'delivery' && (
           <>
-            <Text style={[styles.section, { color: colors.onBackground }]}>Delivery Address</Text>
+            <Text style={[styles.section, { color: colors.onBackground }]}>{t('checkout.address')}</Text>
             <TouchableOpacity style={[styles.addressCard, { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant, ...shadows.sm }]}
               onPress={() => setShowAddressInput(!showAddressInput)}>
               <Ionicons name="location" size={22} color={colors.primary} />
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={[styles.addressLabel, { color: colors.onSurface }]}>Delivery Address</Text>
+                <Text style={[styles.addressLabel, { color: colors.onSurface }]}>{t('checkout.address')}</Text>
                 <Text style={[styles.addressText, { color: colors.onSurfaceVariant }]}>
                   {address || 'Tap to enter your address'}
                 </Text>
@@ -128,7 +131,7 @@ export default function CheckoutScreen() {
         )}
 
         {/* Time slot */}
-        <Text style={[styles.section, { color: colors.onBackground }]}>Time Slot</Text>
+        <Text style={[styles.section, { color: colors.onBackground }]}>{t('checkout.time_slot')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 20 }}>
           {TIME_SLOTS.map((slot) => (
             <TouchableOpacity key={slot} onPress={() => setSelectedSlot(slot)}
@@ -140,7 +143,7 @@ export default function CheckoutScreen() {
         </ScrollView>
 
         {/* Payment */}
-        <Text style={[styles.section, { color: colors.onBackground }]}>Payment Method</Text>
+        <Text style={[styles.section, { color: colors.onBackground }]}>{t('checkout.payment')}</Text>
         <View style={styles.typeRow}>
           {(['card', 'cash'] as const).map((m) => (
             <TouchableOpacity key={m} onPress={() => setPaymentMethod(m)}
@@ -154,13 +157,13 @@ export default function CheckoutScreen() {
         </View>
 
         {/* Note */}
-        <Input label="Note for Chef (optional)" placeholder="Any special requests..."
+        <Input label={t('checkout.note')} placeholder={t('checkout.note_placeholder')}
           value={note} onChangeText={setNote} multiline numberOfLines={3}
           style={{ minHeight: 60, textAlignVertical: 'top' }} />
 
         {/* Summary */}
         <View style={[styles.summary, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
-          <Text style={[styles.summaryTitle, { color: colors.onBackground }]}>Order Summary</Text>
+          <Text style={[styles.summaryTitle, { color: colors.onBackground }]}>{t('checkout.summary')}</Text>
           {items.map((i) => (
             <View key={i.postId} style={styles.sumRow}>
               <Text style={[styles.sumItem, { color: colors.onSurfaceVariant }]}>{i.title} x{i.quantity}</Text>
@@ -169,19 +172,19 @@ export default function CheckoutScreen() {
           ))}
           {deliveryFee > 0 && (
             <View style={styles.sumRow}>
-              <Text style={[styles.sumItem, { color: colors.onSurfaceVariant }]}>Delivery fee</Text>
+              <Text style={[styles.sumItem, { color: colors.onSurfaceVariant }]}>{t('cart.delivery_fee')}</Text>
               <Text style={[styles.sumPrice, { color: colors.onSurface }]}>{deliveryFee} DA</Text>
             </View>
           )}
           <View style={[styles.sumRow, { borderTopWidth: 1, borderTopColor: colors.outlineVariant, paddingTop: 10, marginTop: 6 }]}>
-            <Text style={[styles.totalLabel, { color: colors.onBackground }]}>Total</Text>
+            <Text style={[styles.totalLabel, { color: colors.onBackground }]}>{t('cart.total')}</Text>
             <Text style={[styles.totalValue, { color: colors.primary }]}>{getTotal() + deliveryFee} DA</Text>
           </View>
         </View>
       </ScrollView>
 
       <View style={{ paddingVertical: 16 }}>
-        <Button title="Place Order" onPress={handlePlaceOrder} loading={isLoading || orderLoading} size="lg" />
+        <Button title={t('checkout.place_order')} onPress={handlePlaceOrder} loading={isLoading || orderLoading} size="lg" />
       </View>
     </ScreenWrapper>
   );

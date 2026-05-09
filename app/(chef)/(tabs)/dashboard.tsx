@@ -1,5 +1,5 @@
-import React, { useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect, useCallback, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
@@ -9,6 +9,7 @@ import { useRealtimeChefOrders } from '@/hooks/useRealtime';
 import { Button, ScreenWrapper, AvatarImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
+import { useLanguage } from '@/hooks/useLanguage';
 
 
 
@@ -18,6 +19,15 @@ export default function DashboardScreen() {
   const profile = useAuthStore((s) => s.profile);
   const { chefOrders, fetchChefOrders, dailyEarnings, weeklyEarnings, fetchEarnings, handleNewChefOrder } = useOrdersStore();
   const { chefProfile, fetchProfile, toggleKitchen } = useChefProfileStore();
+  const { t } = useLanguage();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refreshData = useCallback(async () => {
+    if (!profile?.id) return;
+    setRefreshing(true);
+    await Promise.all([fetchChefOrders(profile.id), fetchEarnings(profile.id), fetchProfile(profile.id)]);
+    setRefreshing(false);
+  }, [profile?.id]);
 
   // Subscribe to real-time incoming orders
   useRealtimeChefOrders(profile?.id || '', (order) => {
@@ -51,10 +61,10 @@ export default function DashboardScreen() {
   );
 
   const stats = [
-    { label: "Today's Orders", value: todayOrders.length.toString(), icon: 'receipt', color: '#0369a1', bg: '#e0f2fe' },
-    { label: "Today's Revenue", value: dailyEarnings ? `${dailyEarnings.total.toLocaleString()} DA` : '0 DA', icon: 'wallet', color: '#15803d', bg: '#dcfce7' },
-    { label: 'Pending', value: pendingOrders.length.toString(), icon: 'time', color: '#b45309', bg: '#fef3c7' },
-    { label: 'Avg Rating', value: chefProfile?.rating_average ? `${chefProfile.rating_average} ⭐` : '- ⭐', icon: 'star', color: '#7c3aed', bg: '#ede9fe' },
+    { label: t('chef.todays_orders'), value: todayOrders.length.toString(), icon: 'receipt', color: '#0369a1', bg: '#e0f2fe' },
+    { label: t('chef.todays_revenue'), value: dailyEarnings ? `${dailyEarnings.total.toLocaleString()} DA` : '0 DA', icon: 'wallet', color: '#15803d', bg: '#dcfce7' },
+    { label: t('chef.pending'), value: pendingOrders.length.toString(), icon: 'time', color: '#b45309', bg: '#fef3c7' },
+    { label: t('chef.avg_rating'), value: chefProfile?.rating_average ? `${chefProfile.rating_average} ⭐` : '- ⭐', icon: 'star', color: '#7c3aed', bg: '#ede9fe' },
   ];
 
   // Use real orders only
@@ -69,11 +79,12 @@ export default function DashboardScreen() {
 
   return (
     <ScreenWrapper>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshData} tintColor={colors.primary} />}>
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={[styles.greeting, { color: colors.onSurfaceVariant }]}>Welcome back</Text>
+            <Text style={[styles.greeting, { color: colors.onSurfaceVariant }]}>{t('chef.welcome_back')}</Text>
             <Text style={[styles.name, { color: colors.onBackground }]}>
               {profile?.full_name || 'Chef'} 👨‍🍳
             </Text>
@@ -91,10 +102,10 @@ export default function DashboardScreen() {
         >
           <View style={[styles.bannerDot, { backgroundColor: chefProfile?.is_open !== false ? '#22c55e' : '#ef4444' }]} />
           <Text style={[styles.bannerText, { color: chefProfile?.is_open !== false ? colors.primary : '#dc2626' }]}>
-            Your kitchen is {chefProfile?.is_open !== false ? 'open' : 'closed'}
+            {chefProfile?.is_open !== false ? t('chef.kitchen_open') : t('chef.kitchen_closed')}
           </Text>
           <Text style={{ color: chefProfile?.is_open !== false ? colors.primary : '#dc2626', fontSize: 13, fontWeight: '600' }}>
-            {chefProfile?.is_open !== false ? 'Close' : 'Open'}
+            {chefProfile?.is_open !== false ? t('chef.close') : t('chef.open')}
           </Text>
         </TouchableOpacity>
 
@@ -112,13 +123,13 @@ export default function DashboardScreen() {
         </View>
 
         {/* Post CTA */}
-        <Button title="📝  Post Today's Special" onPress={() => router.push('/(chef)/create-post')} size="lg" />
+        <Button title={`📝  ${t('chef.post_special')}`} onPress={() => router.push('/(chef)/create-post')} size="lg" />
 
         {/* Recent orders */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>Recent Orders</Text>
+          <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>{t('chef.recent_orders')}</Text>
           <TouchableOpacity onPress={() => router.push('/(chef)/(tabs)/orders')}>
-            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>View all</Text>
+            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>{t('chef.view_all')}</Text>
           </TouchableOpacity>
         </View>
 

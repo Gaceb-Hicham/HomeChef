@@ -6,6 +6,7 @@ import { usePostsStore } from '@/stores/postsStore';
 import { chefApi } from '@/lib';
 import { ScreenWrapper, PostImage, AvatarImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '@/hooks/useLanguage';
 
 // Category suggestions (not fake data — these are search helpers)
 const CATEGORIES = [
@@ -18,6 +19,7 @@ const CATEGORIES = [
 export default function SearchScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
+  const { t } = useLanguage();
   const { searchResults, searchPosts, isLoading, clearSearch } = usePostsStore();
   const [query, setQuery] = useState('');
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
