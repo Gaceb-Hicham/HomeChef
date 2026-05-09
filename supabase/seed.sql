@@ -95,6 +95,22 @@ CREATE TABLE IF NOT EXISTS public.messages (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- SECURITY: Enable RLS on messages (safe to re-run)
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+
+-- Add policies (skip if already exist from migration.sql)
+DO $$ BEGIN
+  CREATE POLICY "Users read own messages" ON public.messages
+    FOR SELECT USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "Users send own messages" ON public.messages
+    FOR INSERT WITH CHECK (auth.uid() = sender_id);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 -- Create promo codes table if not exists
 CREATE TABLE IF NOT EXISTS public.promo_codes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -108,6 +124,15 @@ CREATE TABLE IF NOT EXISTS public.promo_codes (
   expires_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- SECURITY: Enable RLS on promo codes (safe to re-run)
+ALTER TABLE public.promo_codes ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "Anyone reads active promos" ON public.promo_codes
+    FOR SELECT USING (is_active = true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Seed promo codes
 INSERT INTO public.promo_codes (code, discount_type, discount_value, min_order, is_active) VALUES
