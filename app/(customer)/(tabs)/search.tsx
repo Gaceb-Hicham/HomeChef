@@ -112,7 +112,7 @@ export default function SearchScreen() {
         /* Filter chips */
         <>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20, gap: 8, marginBottom: 12 }}>
+            contentContainerStyle={{ paddingHorizontal: 20, gap: 8, marginBottom: 12, alignItems: 'center' }}>
             {[
               { key: 'under500', label: 'Under 500 DA', icon: 'pricetag-outline' },
               { key: '500-1000', label: '500-1000 DA', icon: 'pricetag-outline' },
@@ -196,7 +196,7 @@ export default function SearchScreen() {
               {/* Nearby chefs */}
               {nearbyChefs.length > 0 && (
                 <>
-                  <Text style={[styles.sectionTitle, { color: colors.onBackground, marginTop: 20 }]}>📍 Chefs Near You</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.onBackground, marginTop: 28, marginBottom: 12 }]}>📍 Chefs Near You</Text>
                   {nearbyChefs.map((c: any) => (
                     <TouchableOpacity key={c.id || c.user_id}
                       onPress={() => router.push(`/(customer)/chef/${c.user_id}`)}
