@@ -29,6 +29,18 @@ export default function OfferDetailScreen() {
     if (id) fetchPostById(id);
   }, [id]);
 
+  // Must be called unconditionally (before any early return) to obey Rules of Hooks
+  useEffect(() => {
+    if (id) setSaved(isSaved(id));
+  }, [id]);
+
+  const handleSave = useCallback(async () => {
+    if (profile?.id && id) {
+      const result = await toggleSave(profile.id, 'dish', id);
+      setSaved(result);
+    }
+  }, [profile?.id, id]);
+
   const post = currentPost;
   const chef = (post as any)?.chef || { id: '', full_name: 'Chef', profile_photo_url: null };
   const chefProfile = (post as any)?.chef_profile || { kitchen_name: 'Kitchen', rating_average: 0, total_reviews: 0 };
@@ -48,17 +60,6 @@ export default function OfferDetailScreen() {
       </ScreenWrapper>
     );
   }
-
-  useEffect(() => {
-    if (id) setSaved(isSaved(id));
-  }, [id]);
-
-  const handleSave = useCallback(async () => {
-    if (profile?.id && id) {
-      const result = await toggleSave(profile.id, 'dish', id);
-      setSaved(result);
-    }
-  }, [profile?.id, id]);
 
   const handleAddToCart = () => {
     // Add the item and then set quantity directly

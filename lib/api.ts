@@ -21,10 +21,8 @@ export const postsApi = {
       .select(`
         *,
         chef:users!chef_id (
-          id, full_name, profile_photo_url, city, area
-        ),
-        chef_profile:chef_profiles!daily_posts_chef_profile_fkey (
-          kitchen_name, rating_average, total_reviews, is_open
+          id, full_name, profile_photo_url, city, area,
+          chef_profiles ( kitchen_name, rating_average, total_reviews, is_open )
         )
       `)
       .eq('is_active', true)
@@ -36,7 +34,12 @@ export const postsApi = {
     }
 
     const { data, error } = await query;
-    return { data: data || [], error: error?.message || null };
+    // Flatten the nested chef_profiles into a top-level chef_profile for each post
+    const normalized = (data || []).map((post: any) => ({
+      ...post,
+      chef_profile: post.chef?.chef_profiles || null,
+    }));
+    return { data: normalized, error: error?.message || null };
   },
 
   /** Fetch a single post detail with reviews */
@@ -46,10 +49,8 @@ export const postsApi = {
       .select(`
         *,
         chef:users!chef_id (
-          id, full_name, profile_photo_url, city
-        ),
-        chef_profile:chef_profiles!daily_posts_chef_profile_fkey (
-          kitchen_name, rating_average, total_reviews
+          id, full_name, profile_photo_url, city,
+          chef_profiles ( kitchen_name, rating_average, total_reviews )
         ),
         reviews (
           id, overall_rating, comment, created_at,
@@ -59,7 +60,12 @@ export const postsApi = {
       .eq('id', postId)
       .single();
 
-    return { data, error: error?.message || null };
+    // Flatten nested chef_profiles
+    const normalized = data ? {
+      ...data,
+      chef_profile: (data as any)?.chef?.chef_profiles || null,
+    } : null;
+    return { data: normalized, error: error?.message || null };
   },
 
   /** Create a new daily post (chef) */
