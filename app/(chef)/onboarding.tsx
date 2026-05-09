@@ -73,15 +73,29 @@ export default function ChefOnboardingScreen() {
     if (!kitchenName.trim()) { infoAlert('Required', 'Please enter your kitchen name.'); return; }
     if (!profile?.id) { infoAlert('Error', 'Please log in first.'); return; }
     setIsLoading(true);
-    const { error } = await createProfile({
+
+    // Step 1: Create profile WITHOUT location (always works)
+    const profileData: any = {
       user_id: profile.id,
       kitchen_name: kitchenName.trim(),
       bio: bio.trim() || null,
       specialty_tags: specialties.split(',').map(s => s.trim()).filter(Boolean),
       delivery_radius_km: parseInt(radius) || 5,
-      latitude: latitude,
-      longitude: longitude,
-    });
+    };
+
+    const { error } = await createProfile(profileData);
+
+    // Step 2: Try to save location separately (won't break if columns missing)
+    if (!error && latitude && longitude) {
+      try {
+        const { chefApi } = require('@/lib');
+        await chefApi.updateChefProfile(profile.id, { latitude, longitude });
+      } catch (e) {
+        // Location columns may not exist yet — non-critical, skip silently
+        console.log('Location save skipped (columns may not exist yet)');
+      }
+    }
+
     setIsLoading(false);
     if (error) {
       infoAlert('Error', error);

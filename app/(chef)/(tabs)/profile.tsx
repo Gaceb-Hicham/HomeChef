@@ -74,6 +74,29 @@ export default function ChefProfileScreen() {
   };
 
   const handleSetLocation = async () => {
+    const saveLocation = async (lat: number, lng: number) => {
+      if (!profile?.id) return;
+      try {
+        const { error } = await chefApi.updateChefProfile(profile.id, {
+          latitude: lat,
+          longitude: lng,
+        });
+        if (!error) {
+          fetchProfile(profile.id);
+          showToast('Kitchen location updated ✓', 'success');
+        } else {
+          // Column might not exist yet
+          if (error.includes('latitude') || error.includes('column')) {
+            showToast('Run supabase_add_location.sql first', 'warning', 5000);
+          } else {
+            showToast('Failed to save location', 'error');
+          }
+        }
+      } catch (e) {
+        showToast('Run supabase_add_location.sql to enable location', 'warning', 5000);
+      }
+    };
+
     if (Platform.OS === 'web') {
       if (!navigator.geolocation) {
         showToast('Geolocation not supported', 'error');
@@ -81,19 +104,7 @@ export default function ChefProfileScreen() {
       }
       showToast('Detecting location...', 'info');
       navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          if (!profile?.id) return;
-          const { error } = await chefApi.updateChefProfile(profile.id, {
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-          });
-          if (!error) {
-            fetchProfile(profile.id);
-            showToast('Kitchen location updated ✓', 'success');
-          } else {
-            showToast('Failed to save location', 'error');
-          }
-        },
+        (pos) => saveLocation(pos.coords.latitude, pos.coords.longitude),
         () => showToast('Location access denied', 'warning'),
         { enableHighAccuracy: true, timeout: 10000 }
       );
@@ -107,15 +118,7 @@ export default function ChefProfileScreen() {
         }
         showToast('Detecting location...', 'info');
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        if (!profile?.id) return;
-        const { error } = await chefApi.updateChefProfile(profile.id, {
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-        });
-        if (!error) {
-          fetchProfile(profile.id);
-          showToast('Kitchen location updated ✓', 'success');
-        }
+        await saveLocation(loc.coords.latitude, loc.coords.longitude);
       } catch (e) {
         showToast('Could not get location', 'error');
       }
