@@ -1,4 +1,11 @@
-import { Platform, Alert } from 'react-native';
+import { Alert } from 'react-native';
+
+/**
+ * Detect web environment reliably — works during SSR too.
+ * We check for `window` and `document` directly instead of relying on Platform.OS,
+ * which can be unreliable during Expo Router's SSR pass.
+ */
+const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
 
 /**
  * Cross-platform alert that works on both mobile (native Alert) and web (window.confirm/alert).
@@ -12,7 +19,7 @@ export function crossAlert(
     style?: 'default' | 'cancel' | 'destructive';
   }>
 ) {
-  if (Platform.OS === 'web') {
+  if (isWeb) {
     // On web, use window.confirm for two-button dialogs and window.alert for single-button
     if (buttons && buttons.length > 1) {
       // Find the confirm (non-cancel) button
@@ -41,7 +48,7 @@ export function crossAlert(
  * Simple info alert (no action buttons needed)
  */
 export function infoAlert(title: string, message?: string) {
-  if (Platform.OS === 'web') {
+  if (isWeb) {
     window.alert(`${title}${message ? '\n\n' + message : ''}`);
   } else {
     Alert.alert(title, message);

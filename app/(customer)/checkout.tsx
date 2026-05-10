@@ -84,11 +84,58 @@ export default function CheckoutScreen() {
   const [promoCode, setPromoCode] = useState('');
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [promoApplied, setPromoApplied] = useState('');
+  const [orderError, setOrderError] = useState('');
+  const [locating, setLocating] = useState(false);
 
   // Dynamic data from chef/post
   const [chefDeliveryRadius, setChefDeliveryRadius] = useState(5);
   const [postDeadline, setPostDeadline] = useState<string | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
+
+  /**
+   * Auto-detect delivery address using browser geolocation + reverse geocoding.
+   * Uses OpenStreetMap Nominatim (free, no API key required).
+   */
+  const detectLocation = async () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      infoAlert('Not Available', 'Geolocation is not supported by your browser.');
+      return;
+    }
+
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          // Reverse geocode with OpenStreetMap Nominatim
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          const data = await res.json();
+          if (data?.display_name) {
+            setAddress(data.display_name);
+            setShowAddressInput(false);
+            showToast('📍 Address detected!', 'success');
+          } else {
+            setAddress(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+          }
+        } catch (e) {
+          infoAlert('Geocoding Error', 'Could not determine your address. Please enter it manually.');
+        }
+        setLocating(false);
+      },
+      (err) => {
+        setLocating(false);
+        if (err.code === 1) {
+          infoAlert('Permission Denied', 'Please allow location access in your browser settings.');
+        } else {
+          infoAlert('Location Error', 'Could not get your location. Please enter your address manually.');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   // Load chef profile + post data for dynamic time calculations
   useEffect(() => {
@@ -172,47 +219,69 @@ export default function CheckoutScreen() {
   const finalTotal = Math.max(0, getTotal() + deliveryFee - promoDiscount);
 
   const handlePlaceOrder = async () => {
+    console.log('[Checkout] Place Order pressed');
+    setOrderError('');
+
     if (!profile?.id) {
-      infoAlert('Error', 'Please log in to place an order');
+      const msg = 'Please log in to place an order';
+      setOrderError(msg);
+      infoAlert('Error', msg);
+      return;
+    }
+
+    if (items.length === 0) {
+      const msg = 'Your cart is empty';
+      setOrderError(msg);
+      infoAlert('Error', msg);
       return;
     }
 
     setIsLoading(true);
-
-    // Group items by chef and create separate orders
-    const itemsByChef = getItemsByChef();
-    const orderPromises = Object.entries(itemsByChef).map(async ([chefId, chefItems]) => {
-      for (const item of chefItems) {
-        const order = {
-          customer_id: profile.id,
-          chef_id: chefId,
-          post_id: item.postId,
-          quantity: item.quantity,
-          unit_price: item.price,
-          total_price: item.price * item.quantity,
-          customer_note: note || null,
-          delivery_type: deliveryType,
-          delivery_address: deliveryType === 'delivery' ? (address || `${profile.area || ''}, ${profile.city || ''}`) : null,
-          payment_method: paymentMethod,
-          payment_status: paymentMethod === 'cash' ? 'pending' : 'paid',
-          order_status: 'received',
-          scheduled_time: selectedSlot !== 'ASAP' ? selectedSlot : null,
-        };
-
-        const { error } = await placeOrder(order);
-        if (error) throw new Error(error);
-      }
-    });
+    console.log('[Checkout] Placing order for', items.length, 'items');
 
     try {
-      await Promise.all(orderPromises);
+      // Group items by chef and create separate orders
+      const itemsByChef = getItemsByChef();
+
+      for (const [chefId, chefItems] of Object.entries(itemsByChef)) {
+        for (const item of chefItems) {
+          console.log('[Checkout] Ordering:', item.title, 'qty:', item.quantity, 'postId:', item.postId);
+
+          const order = {
+            customer_id: profile.id,
+            chef_id: chefId,
+            post_id: item.postId,
+            quantity: item.quantity,
+            unit_price: item.price,
+            total_price: item.price * item.quantity,
+            customer_note: note || null,
+            delivery_type: deliveryType,
+            delivery_address: deliveryType === 'delivery' ? (address || `${profile.area || ''}, ${profile.city || ''}`) : null,
+            payment_method: paymentMethod,
+            payment_status: paymentMethod === 'cash' ? 'pending' : 'paid',
+            order_status: 'received',
+            scheduled_time: selectedSlot !== 'ASAP' ? selectedSlot : null,
+          };
+
+          const { error } = await placeOrder(order);
+          if (error) {
+            console.error('[Checkout] Order error:', error);
+            throw new Error(error);
+          }
+        }
+      }
+
+      console.log('[Checkout] All orders placed successfully!');
       setIsLoading(false);
       clearCart();
       showToast(t('checkout.order_placed'), 'success', 4000);
       router.replace('/(customer)/(tabs)/orders');
     } catch (e: any) {
+      console.error('[Checkout] Order failed:', e);
       setIsLoading(false);
-      infoAlert('Order Failed', e.message || 'Something went wrong. Please try again.');
+      const msg = e.message || 'Something went wrong. Please try again.';
+      setOrderError(msg);
+      infoAlert('Order Failed', msg);
     }
   };
 
@@ -250,12 +319,24 @@ export default function CheckoutScreen() {
               <Ionicons name="location" size={22} color={colors.primary} />
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={[styles.addressLabel, { color: colors.onSurface }]}>{t('checkout.address')}</Text>
-                <Text style={[styles.addressText, { color: colors.onSurfaceVariant }]}>
+                <Text style={[styles.addressText, { color: colors.onSurfaceVariant }]} numberOfLines={2}>
                   {address || 'Tap to enter your address'}
                 </Text>
               </View>
               <Ionicons name="create-outline" size={18} color={colors.outline} />
             </TouchableOpacity>
+
+            {/* Auto-detect location button */}
+            <TouchableOpacity
+              onPress={detectLocation}
+              disabled={locating}
+              style={[styles.detectBtn, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}>
+              <Ionicons name={locating ? 'hourglass-outline' : 'navigate'} size={18} color={colors.primary} />
+              <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600', marginLeft: 8 }}>
+                {locating ? 'Detecting location...' : '📍 Auto-detect my location'}
+              </Text>
+            </TouchableOpacity>
+
             {showAddressInput && (
               <Input label="" placeholder="e.g. 123 Rue Didouche Mourad, Algiers"
                 value={address} onChangeText={setAddress} icon="location-outline" />
@@ -351,6 +432,16 @@ export default function CheckoutScreen() {
       </ScrollView>
 
       <View style={{ paddingVertical: 16 }}>
+        {/* Visible error banner */}
+        {orderError ? (
+          <View style={[styles.errorBanner, { backgroundColor: '#fef2f2', borderColor: '#fca5a5' }]}>
+            <Ionicons name="alert-circle" size={18} color="#dc2626" />
+            <Text style={{ color: '#dc2626', fontSize: 13, fontWeight: '600', flex: 1, marginLeft: 8 }}>{orderError}</Text>
+            <TouchableOpacity onPress={() => setOrderError('')}>
+              <Ionicons name="close" size={16} color="#dc2626" />
+            </TouchableOpacity>
+          </View>
+        ) : null}
         <Button title={t('checkout.place_order')} onPress={handlePlaceOrder} loading={isLoading || orderLoading} size="lg" />
       </View>
     </ScreenWrapper>
@@ -363,9 +454,10 @@ const styles = StyleSheet.create({
   section: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 16, fontWeight: '600', marginBottom: 10 },
   typeRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
   typeCard: { flex: 1, alignItems: 'center', padding: 16, borderRadius: 14, borderWidth: 1.5 },
-  addressCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 14, borderWidth: 1, marginBottom: 20 },
+  addressCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 14, borderWidth: 1, marginBottom: 10 },
   addressLabel: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 15, fontWeight: '600' },
   addressText: { fontFamily: 'PlusJakartaSans-Regular', fontSize: 13, marginTop: 2 },
+  detectBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1, marginBottom: 20 },
   slotChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1 },
   summary: { padding: 20, borderRadius: 16, marginBottom: 8 },
   summaryTitle: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 16, fontWeight: '600', marginBottom: 12 },
@@ -376,4 +468,5 @@ const styles = StyleSheet.create({
   totalValue: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 20, fontWeight: '700' },
   promoBtn: { height: 50, paddingHorizontal: 20, borderRadius: 14, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end' },
   timeCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 14, marginBottom: 20 },
+  errorBanner: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 12 },
 });
