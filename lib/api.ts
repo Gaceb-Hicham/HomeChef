@@ -141,13 +141,24 @@ export const ordersApi = {
       p_qty: order.quantity,
     });
 
-    if (qtyError) return { data: null, error: qtyError.message };
+    if (qtyError) {
+      console.error('[placeOrder] RPC error:', qtyError);
+      // If the function doesn't exist in Supabase, give a clearer message
+      if (qtyError.message?.includes('function') || qtyError.code === '42883') {
+        return { data: null, error: 'Server configuration error: quantity function not found. Please ensure the database migration has been run.' };
+      }
+      return { data: null, error: qtyError.message };
+    }
 
     const { data, error } = await supabase
       .from('orders')
       .insert(order)
       .select()
       .single();
+
+    if (error) {
+      console.error('[placeOrder] Insert error:', error);
+    }
 
     return { data, error: error?.message || null };
   },

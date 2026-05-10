@@ -1,17 +1,70 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useCartStore } from '@/stores/cartStore';
 import { useOrdersStore } from '@/stores/ordersStore';
 import { useAuthStore } from '@/stores/authStore';
+import { supabase } from '@/lib/supabase';
 import { Button, Input, ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useToast } from '@/components/ui/Toast';
 
-const TIME_SLOTS = ['12:00 - 12:30', '12:30 - 13:00', '13:00 - 13:30', '13:30 - 14:00'];
+/**
+ * Generates 30-minute time slots from now until the deadline.
+ * If the deadline has passed or is too close, returns a "ASAP" slot.
+ */
+function generateTimeSlots(deadlineStr?: string | null): string[] {
+  const now = new Date();
+  const slots: string[] = [];
+
+  // Earliest order can be ready: round up to next 30-min mark + 30 min prep
+  const startMinutes = Math.ceil((now.getHours() * 60 + now.getMinutes() + 30) / 30) * 30;
+
+  // Default deadline: 3 hours from now if none provided
+  let deadlineMinutes: number;
+  if (deadlineStr) {
+    const deadline = new Date(deadlineStr);
+    if (isNaN(deadline.getTime())) {
+      deadlineMinutes = startMinutes + 180;
+    } else {
+      deadlineMinutes = deadline.getHours() * 60 + deadline.getMinutes();
+    }
+  } else {
+    deadlineMinutes = startMinutes + 180;
+  }
+
+  // Generate 30-min slots
+  for (let m = startMinutes; m + 30 <= deadlineMinutes && slots.length < 8; m += 30) {
+    const startH = Math.floor(m / 60);
+    const startM = m % 60;
+    const endH = Math.floor((m + 30) / 60);
+    const endM = (m + 30) % 60;
+    const fmt = (h: number, min: number) => `${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
+    slots.push(`${fmt(startH, startM)} - ${fmt(endH, endM)}`);
+  }
+
+  // Always provide at least one fallback
+  if (slots.length === 0) {
+    slots.push('ASAP');
+  }
+
+  return slots;
+}
+
+/**
+ * Estimates delivery time based on chef's delivery radius.
+ * Uses a simple formula: base 15min + 3min per km of radius.
+ */
+function estimateDeliveryTime(radiusKm: number): string {
+  const baseMins = 15;
+  const perKmMins = 3;
+  const minTime = baseMins + Math.round(radiusKm * perKmMins * 0.5);
+  const maxTime = baseMins + Math.round(radiusKm * perKmMins);
+  return `${minTime}-${maxTime} min`;
+}
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -23,7 +76,6 @@ export default function CheckoutScreen() {
   const { showToast } = useToast();
 
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
-  const [selectedSlot, setSelectedSlot] = useState(TIME_SLOTS[0]);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('cash');
   const [note, setNote] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -33,14 +85,71 @@ export default function CheckoutScreen() {
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [promoApplied, setPromoApplied] = useState('');
 
+  // Dynamic data from chef/post
+  const [chefDeliveryRadius, setChefDeliveryRadius] = useState(5);
+  const [postDeadline, setPostDeadline] = useState<string | null>(null);
+  const [dataLoaded, setDataLoaded] = useState(false);
+
+  // Load chef profile + post data for dynamic time calculations
+  useEffect(() => {
+    const loadChefData = async () => {
+      if (items.length === 0) return;
+
+      // Get the first item's post to find the chef and deadline
+      const firstItem = items[0];
+      try {
+        // Fetch the post's deadline
+        const { data: postData } = await supabase
+          .from('daily_posts')
+          .select('order_deadline, chef_id')
+          .eq('id', firstItem.postId)
+          .single();
+
+        if (postData) {
+          setPostDeadline(postData.order_deadline);
+
+          // Fetch the chef's delivery radius
+          const { data: chefData } = await supabase
+            .from('chef_profiles')
+            .select('delivery_radius_km')
+            .eq('user_id', postData.chef_id)
+            .single();
+
+          if (chefData?.delivery_radius_km) {
+            setChefDeliveryRadius(chefData.delivery_radius_km);
+          }
+        }
+      } catch (e) {
+        // Fall back to defaults
+      }
+      setDataLoaded(true);
+    };
+
+    loadChefData();
+  }, [items]);
+
   useEffect(() => {
     if (profile) {
       setAddress(profile.area && profile.city ? `${profile.area}, ${profile.city}` : '');
     }
   }, [profile]);
 
+  // Dynamic time slots based on post deadline
+  const timeSlots = useMemo(() => generateTimeSlots(postDeadline), [postDeadline]);
+  const [selectedSlot, setSelectedSlot] = useState('');
+
+  // Set default slot when slots are generated
+  useEffect(() => {
+    if (timeSlots.length > 0 && !selectedSlot) {
+      setSelectedSlot(timeSlots[0]);
+    }
+  }, [timeSlots]);
+
+  // Dynamic delivery estimate based on chef's radius
   const deliveryFee = deliveryType === 'delivery' ? 100 : 0;
-  const estimatedTime = deliveryType === 'delivery' ? '25-40 min' : '~15 min';
+  const estimatedTime = deliveryType === 'delivery'
+    ? estimateDeliveryTime(chefDeliveryRadius)
+    : '~15 min';
 
   const applyPromo = () => {
     const code = promoCode.trim().toUpperCase();
@@ -87,7 +196,7 @@ export default function CheckoutScreen() {
           payment_method: paymentMethod,
           payment_status: paymentMethod === 'cash' ? 'pending' : 'paid',
           order_status: 'received',
-          scheduled_time: null,
+          scheduled_time: selectedSlot !== 'ASAP' ? selectedSlot : null,
         };
 
         const { error } = await placeOrder(order);
@@ -154,13 +263,13 @@ export default function CheckoutScreen() {
           </>
         )}
 
-        {/* Time slot */}
+        {/* Dynamic time slot */}
         <Text style={[styles.section, { color: colors.onBackground }]}>{t('checkout.time_slot')}</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 20 }}>
-          {TIME_SLOTS.map((slot) => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 20, alignItems: 'center' }}>
+          {timeSlots.map((slot) => (
             <TouchableOpacity key={slot} onPress={() => setSelectedSlot(slot)}
               style={[styles.slotChip, { backgroundColor: selectedSlot === slot ? colors.primary : colors.surfaceContainerLow, borderColor: selectedSlot === slot ? colors.primary : colors.outlineVariant }]}>
-              <Ionicons name="time-outline" size={14} color={selectedSlot === slot ? colors.onPrimary : colors.outline} />
+              <Ionicons name={slot === 'ASAP' ? 'flash' : 'time-outline'} size={14} color={selectedSlot === slot ? colors.onPrimary : colors.outline} />
               <Text style={{ color: selectedSlot === slot ? colors.onPrimary : colors.onSurfaceVariant, fontSize: 13, fontWeight: '600' }}>{slot}</Text>
             </TouchableOpacity>
           ))}
@@ -203,7 +312,7 @@ export default function CheckoutScreen() {
           </Text>
         ) : null}
 
-        {/* Estimated Time */}
+        {/* Dynamic Estimated Time */}
         <View style={[styles.timeCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
           <Ionicons name="timer-outline" size={22} color={colors.primary} />
           <View style={{ flex: 1, marginLeft: 12 }}>
