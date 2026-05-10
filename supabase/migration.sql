@@ -332,7 +332,9 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
 -- 12. DECREMENT REMAINING QTY FUNCTION (called on order)
 -- ========================
 CREATE OR REPLACE FUNCTION decrement_remaining_quantity(p_post_id UUID, p_qty INTEGER)
-RETURNS void AS $$
+RETURNS void
+SECURITY DEFINER
+AS $$
 BEGIN
   UPDATE public.daily_posts
   SET remaining_quantity = remaining_quantity - p_qty,
