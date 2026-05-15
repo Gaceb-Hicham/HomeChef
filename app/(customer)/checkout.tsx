@@ -247,6 +247,19 @@ export default function CheckoutScreen() {
         for (const item of chefItems) {
           console.log('[Checkout] Ordering:', item.title, 'qty:', item.quantity, 'postId:', item.postId);
 
+          // Convert time slot to a proper timestamp for the database
+          let scheduledTimestamp: string | null = null;
+          if (selectedSlot && selectedSlot !== 'ASAP') {
+            // Extract start time from slot like "04:00 - 04:30"
+            const startTime = selectedSlot.split(' - ')[0]; // "04:00"
+            const today = new Date().toISOString().split('T')[0]; // "2026-05-10"
+            scheduledTimestamp = `${today}T${startTime}:00.000Z`;
+          }
+
+          const orderNote = selectedSlot && selectedSlot !== 'ASAP'
+            ? `${note ? note + ' | ' : ''}Time slot: ${selectedSlot}`
+            : note || null;
+
           const order = {
             customer_id: profile.id,
             chef_id: chefId,
@@ -254,13 +267,13 @@ export default function CheckoutScreen() {
             quantity: item.quantity,
             unit_price: item.price,
             total_price: item.price * item.quantity,
-            customer_note: note || null,
+            customer_note: orderNote,
             delivery_type: deliveryType,
             delivery_address: deliveryType === 'delivery' ? (address || `${profile.area || ''}, ${profile.city || ''}`) : null,
             payment_method: paymentMethod,
             payment_status: paymentMethod === 'cash' ? 'pending' : 'paid',
             order_status: 'received',
-            scheduled_time: selectedSlot !== 'ASAP' ? selectedSlot : null,
+            scheduled_time: scheduledTimestamp,
           };
 
           const { error } = await placeOrder(order);
