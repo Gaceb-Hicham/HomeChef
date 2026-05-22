@@ -1,0 +1,864 @@
+🍽
+HomeChef
+Homemade Food Marketplace
+Full Product Development Brief for Antigravity
+2 User Roles
+Customer & Home Chef
+3 Order Modes
+Instant · Prep Request · Pre-order
+50+ Screens
+Full UI implementation
+1. PROJECT OVERVIEW
+Build a complete, production-ready mobile application called HomeChef — a homemade food marketplace that connects home-based cooks, bakers, and dessert makers with local customers looking for authentic, handcrafted meals.
+This is NOT a restaurant or grocery delivery app. It is a personal, community-driven platform where home cooks share what they make, and customers discover real food from real people nearby.
+The UI design is fully provided via the attached Stitch design file. Your job is to implement it completely — pixel-perfect — with all business logic, navigation flows, state management, real-time updates, and API integrations.
+Core Concept
+A home baker who makes donuts or tiramisu has no storefront — they currently rely on social media and word of mouth. HomeChef gives them a professional platform to:
+Post what they are making today with photos, price, and available quantity
+Receive preparation requests for dishes they can cook on demand
+Showcase their full specialty menu for advance pre-orders
+Manage orders, earnings, and customer relationships in one place
+Customers get to:
+Discover homemade food nearby updated daily
+Order before it sells out with real-time availability
+Request custom preparation for a future date
+Pre-order from a chef's specialty menu for any occasion
+2. TECH STACK REQUIREMENTS
+Category
+Requirement
+Framework
+React Native (Expo) or Flutter — whichever produces the most faithful result to the provided design
+Backend / API
+Supabase or Firebase for auth, database, storage, and real-time
+State Management
+Zustand or Redux Toolkit
+Navigation
+React Navigation (Stack + Bottom Tabs) or Go Router for Flutter
+Maps
+Google Maps API or Mapbox
+Payments
+Stripe API for card payments + Cash on Delivery option
+Push Notifications
+Expo Notifications or Firebase Cloud Messaging (FCM)
+Image Storage
+Supabase Storage or Firebase Storage with CDN delivery
+Real-time
+Supabase Realtime or Firestore onSnapshot for live order tracking
+SMS / OTP
+Twilio or Supabase Auth phone verification
+Localization
+i18n with full Arabic (RTL) and English (LTR) support
+3. USER ROLES & AUTHENTICATION
+Two Distinct User Roles
+CUSTOMER
+HOME CHEF (SELLER)
+Browse and discover daily posts
+Place instant, prep, and pre-orders
+Track orders in real-time
+Review chefs and dishes
+Save favorites and follow chefs
+Create a personal storefront profile
+Post daily offerings with quantity & deadline
+Accept or reject prep requests
+Manage specialty menu for pre-orders
+Track earnings and manage withdrawals
+Authentication Flows
+Email + password registration and login
+Phone number + OTP verification via SMS (Twilio or Supabase Auth)
+Google OAuth and Apple OAuth login
+Role selection during onboarding — Customer or Chef
+JWT token management with auto refresh and persistent session
+Forgot password → OTP code → reset password flow
+Account lock after 5 failed login attempts with cooldown timer
+Account deletion with full data wipe
+4. THE THREE ORDER MODES (CORE BUSINESS LOGIC)
+This is the heart of the application. Three distinct ordering modes must coexist seamlessly within the same platform.
+Mode 1 — Instant Order (Daily Post)
+The chef posts what they have prepared today. Customers order from what is currently available.
+Chef publishes a daily post with photos, price, available quantity, and order deadline
+Post appears live in all followers' feeds and nearby discovery feed
+Real-time remaining quantity counter counts down as orders come in
+Countdown timer shows time remaining until order deadline
+When quantity reaches zero or deadline passes, post automatically shows Sold Out or Closed
+Payment: Pay Now via card or Pay on Delivery
+Mode 2 — Preparation Request
+The chef lists what they are capable of preparing. The customer requests a specific dish for a future date and the chef approves or rejects.
+Chef maintains a Preparation Menu — a list of dishes they can cook on request
+Each item in the prep menu has: name, description, photos, base price, minimum order quantity, minimum notice time in hours
+Customer browses the prep menu on the chef's profile and selects a dish
+Customer fills a request form: desired date and time, quantity, special instructions, and budget if negotiable
+Chef receives push notification with full request details
+Chef can: Accept with confirmed price and time, Reject with an optional reason, or Counter-offer with a different price or date
+Customer receives push notification with the chef's response
+If accepted: order is created and payment is processed or scheduled
+Full conversation thread between customer and chef on the request
+Mode 3 — Specialty Pre-Order
+The chef's profile displays everything they are known for. Customers browse this catalog and place advance orders for any item regardless of whether it was posted today.
+Chef maintains a Specialties Catalog — their complete portfolio of offerings
+Each specialty has: photos, description, price range, typical preparation time, availability (always available / seasonal / on request)
+Customer taps any specialty item and selects a future date from a calendar picker
+System checks chef's availability calendar and blocks unavailable dates
+Order is submitted as a pre-order and chef confirms or suggests an alternative date
+Ideal for occasions: birthdays, gatherings, events — where planning ahead is necessary
+5. DATABASE SCHEMA
+Core Tables
+users
+Field
+Type
+Notes
+id
+uuid PK
+auto-generated
+full_name
+varchar
+required
+email
+varchar unique
+required
+phone
+varchar unique
+required for OTP
+role
+enum
+customer / chef
+profile_photo_url
+text
+CDN URL
+city
+varchar
+area
+varchar
+latitude
+decimal
+from location permission
+longitude
+decimal
+from location permission
+is_verified
+boolean
+phone verified
+is_active
+boolean
+account status
+created_at
+timestamp
+chef_profiles
+Field
+Type
+Notes
+id
+uuid PK
+user_id
+uuid FK → users
+kitchen_name
+varchar
+display name
+bio
+text
+chef story
+specialty_tags
+text[]
+array of tags
+cover_photo_url
+text
+CDN URL
+rating_average
+decimal
+calculated field
+total_reviews
+integer
+counter
+total_orders_fulfilled
+integer
+counter
+response_rate
+decimal
+percentage
+is_open
+boolean
+accepting orders now
+is_verified
+boolean
+platform badge
+delivery_radius_km
+decimal
+created_at
+timestamp
+daily_posts
+Field
+Type
+Notes
+id
+uuid PK
+chef_id
+uuid FK
+title
+varchar
+dish name
+description
+text
+photos
+text[]
+array of CDN URLs
+price
+decimal
+per portion
+available_quantity
+integer
+total posted
+remaining_quantity
+integer
+live counter
+order_deadline
+timestamp
+today
+delivery_available
+boolean
+pickup_available
+boolean
+is_sold_out
+boolean
+auto or manual
+is_active
+boolean
+visible in feed
+post_date
+date
+YYYY-MM-DD
+created_at
+timestamp
+prep_menu_items
+Field
+Type
+Notes
+id
+uuid PK
+chef_id
+uuid FK
+title
+varchar
+description
+text
+photos
+text[]
+base_price
+decimal
+starting price
+price_negotiable
+boolean
+min_order_qty
+integer
+min_notice_hours
+integer
+advance notice needed
+is_active
+boolean
+chef_specialties
+Field
+Type
+Notes
+id
+uuid PK
+chef_id
+uuid FK
+title
+varchar
+description
+text
+photos
+text[]
+price_range_min
+decimal
+price_range_max
+decimal
+prep_time_hours
+integer
+typical time
+availability
+enum
+always / seasonal / on_request
+category
+varchar
+desserts, savory, etc.
+is_active
+boolean
+orders
+Field
+Type
+Notes
+id
+uuid PK
+order_type
+enum
+instant / prep / preorder
+customer_id
+uuid FK
+chef_id
+uuid FK
+reference_id
+uuid
+post / prep_request / specialty id
+quantity
+integer
+unit_price
+decimal
+total_price
+decimal
+customer_note
+text
+delivery_type
+enum
+delivery / pickup
+delivery_address
+jsonb
+full address object
+payment_method
+enum
+card / cash
+payment_status
+enum
+paid / pending / refunded
+order_status
+enum
+received / preparing / ready / out_for_delivery / delivered / cancelled
+scheduled_time
+timestamp
+for prep/preorders
+created_at
+timestamp
+updated_at
+timestamp
+prep_requests
+Field
+Type
+Notes
+id
+uuid PK
+customer_id
+uuid FK
+chef_id
+uuid FK
+menu_item_id
+uuid FK
+from prep_menu_items
+requested_date
+timestamp
+quantity
+integer
+offered_price
+decimal
+customer offer
+note
+text
+special instructions
+status
+enum
+pending / accepted / rejected / countered
+chef_response_note
+text
+counter_price
+decimal
+chef's counter offer
+counter_date
+timestamp
+chef's counter date
+created_at
+timestamp
+Additional Tables
+reviews — id, order_id, customer_id, chef_id, overall_rating, taste_rating, packaging_rating, accuracy_rating, comment, photos[], chef_reply, created_at
+comments — id, post_id, user_id, text, likes_count, created_at
+comment_likes — id, comment_id, user_id, created_at
+saved_items — id, user_id, type (chef/dish), reference_id, created_at
+notifications — id, user_id, type, title, body, reference_id, reference_type, is_read, created_at
+addresses — id, user_id, label, full_address, latitude, longitude, is_default
+payment_methods — id, user_id, stripe_payment_method_id, card_last4, card_brand, is_default
+earnings — id, chef_id, order_id, amount, status (pending/available/withdrawn), created_at
+withdrawals — id, chef_id, amount, bank_info jsonb, status, requested_at
+chef_availability — id, chef_id, date, is_available, note
+flash_sales — id, chef_id, post_id, discount_percentage, starts_at, ends_at, is_active
+group_orders — id, initiator_id, chef_id, menu_item_id, target_quantity, current_quantity, deadline, status
+group_order_participants — id, group_order_id, customer_id, quantity
+waitlist — id, post_id, customer_id, created_at, notified_at
+subscriptions — id, customer_id, chef_id, frequency (weekly/biweekly), preferred_day, quantity, is_active, next_order_date
+6. API ENDPOINTS
+Authentication
+POST /auth/register — create account with role selection
+POST /auth/login — returns JWT + refresh token
+POST /auth/verify-otp — phone verification
+POST /auth/resend-otp — with rate limiting
+POST /auth/forgot-password — send reset code
+POST /auth/reset-password — update with new password
+POST /auth/refresh — refresh access token
+POST /auth/logout — invalidate token
+DELETE /auth/delete-account — full data wipe
+Users & Profiles
+GET /users/me — current user profile
+PATCH /users/me — update profile fields
+PATCH /users/me/photo — upload profile photo
+GET /chefs/:id — public chef profile
+POST /chefs/setup — chef onboarding (chef role only)
+PATCH /chefs/me — update chef profile
+GET /chefs/nearby?lat=&lng=&radius= — discovery feed data
+GET /chefs/trending — top rated chefs this week
+Daily Posts
+POST /posts — create today's post (chef only)
+GET /posts/:id — single post detail
+PATCH /posts/:id — edit active post (chef only)
+DELETE /posts/:id — remove post (chef only)
+PATCH /posts/:id/sold-out — manual sold out toggle
+GET /posts/feed?lat=&lng=&category=&page= — paginated discovery feed
+GET /posts/chef/:chef_id/archive — all past posts by chef
+Prep Menu & Requests
+POST /prep-menu — add item to prep menu (chef only)
+GET /prep-menu/chef/:chef_id — get chef's prep menu
+PATCH /prep-menu/:id — update item (chef only)
+DELETE /prep-menu/:id — remove item (chef only)
+POST /prep-requests — submit prep request (customer)
+GET /prep-requests/chef/me — incoming requests (chef)
+GET /prep-requests/customer/me — my requests (customer)
+PATCH /prep-requests/:id/respond — accept / reject / counter (chef only)
+POST /prep-requests/:id/messages — send message on request thread
+GET /prep-requests/:id/messages — get conversation thread
+Specialties & Pre-Orders
+POST /specialties — add specialty (chef only)
+GET /specialties/chef/:chef_id — public specialty catalog
+PATCH /specialties/:id — update (chef only)
+DELETE /specialties/:id — remove (chef only)
+GET /specialties/:id/availability?month= — available dates for a specialty
+POST /preorders — submit pre-order from specialty catalog
+GET /preorders/customer/me — customer's pre-orders
+GET /preorders/chef/me — chef's pre-orders
+PATCH /preorders/:id/respond — confirm or suggest alternative
+Orders
+POST /orders — place instant order
+GET /orders/:id — order detail
+GET /orders/customer/me — customer order history with filters
+GET /orders/chef/me — chef order management list
+PATCH /orders/:id/status — update status (chef only)
+POST /orders/:id/cancel — cancel with reason
+POST /orders/:id/reorder — repopulate cart with same items
+Reviews, Comments & Social
+POST /reviews — submit review (one per order)
+GET /reviews/chef/:chef_id — paginated reviews for chef
+POST /reviews/:id/reply — chef reply to review
+POST /comments — add comment to post
+GET /comments/post/:post_id — paginated comments
+POST /comments/:id/like — toggle like
+DELETE /comments/:id — delete own comment
+POST /saved — save chef or dish
+DELETE /saved/:id — unsave
+GET /saved/me — all saved items
+POST /follow/:chef_id — follow chef
+DELETE /follow/:chef_id — unfollow
+Search
+GET /search?q=&category=&lat=&lng=&price_min=&price_max=&rating=&delivery=&sort= — unified search with all filters
+Payments (Stripe)
+POST /payments/create-intent — create Stripe PaymentIntent
+POST /payments/confirm — confirm payment with 3D Secure support
+POST /payments/save-method — save card for future use
+GET /payments/methods/me — list saved cards
+DELETE /payments/methods/:id — remove saved card
+Earnings & Withdrawals
+GET /earnings/me — chef earnings with daily/weekly/monthly breakdown
+POST /withdrawals/request — request payout to bank
+GET /withdrawals/me — withdrawal history and status
+Notifications
+GET /notifications/me — paginated notification list
+PATCH /notifications/:id/read — mark single as read
+PATCH /notifications/read-all — mark all as read
+Addresses & Settings
+POST /addresses — add new address with map coordinates
+GET /addresses/me — user's saved addresses
+PATCH /addresses/:id — update address
+DELETE /addresses/:id — remove address
+PATCH /settings/notifications — update notification preferences
+PATCH /settings/availability — chef open/closed toggle
+7. SCREEN-BY-SCREEN IMPLEMENTATION
+Implement every screen exactly as shown in the attached Stitch design file. All logic, interactions, and edge cases are described below.
+Onboarding & Auth Screens
+1. Splash Screen
+Animated logo reveal for 2.5 seconds
+Check for active session → redirect to Home Feed or Login automatically
+Never show again once user is logged in
+2. Onboarding Slides (3 screens)
+Swipeable slides with animated progress dots
+Skip button jumps directly to Role Selection
+Store onboarding_seen flag in local storage — never shows again after first time
+Slide 1: Discover what your neighbors are cooking today
+Slide 2: Order fresh homemade meals before they sell out
+Slide 3: Are you a home cook? Share your creations and earn
+3. Role Selection
+Two large visual cards: Order Food vs Sell My Food
+Selection is stored in user record and local state
+Routes to the appropriate sign-up and onboarding flow per role
+4. Sign Up
+Fields: full name, phone, email, password, confirm password, optional profile photo
+Validate all fields with inline error messages before submission
+Password strength indicator
+Terms and conditions checkbox — required before submit
+Social login: Google and Apple
+After submit → OTP sent to phone number
+5. Login
+Email or phone + password
+Show and hide password toggle
+Remember Me toggle for persistent session
+Account locked after 5 failed attempts — shows countdown timer
+Forgot Password link → Forgot Password Screen
+6. OTP Verification
+6-digit OTP input with auto-advance between boxes
+Auto-submit when all 6 digits are filled
+60-second countdown resend timer
+Maximum 3 resend attempts
+7. Forgot Password & Reset Password
+Enter phone or email to receive reset code
+OTP verification screen → New password + confirm password
+Password must meet strength requirements
+Customer Screens
+8. Location Permission
+Map background visual, allow location button
+If granted: auto-detect city and area, store coordinates
+If denied: manual city and area text input with autocomplete
+9. Home Feed
+Stories row at top — chefs the user follows who posted today
+Near You Today horizontal scroll section
+Following section — posts from followed chefs
+Trending Today section
+Category filter chips: All, Desserts, Savory, Pastries, Drinks, Healthy, Other
+Each card: food photo, chef name + avatar, dish name, price, remaining quantity badge, deadline countdown
+Sold Out overlay appears automatically via real-time listener
+Pull to refresh, infinite scroll with 20 items per page
+Floating search button
+10. Search & Explore
+Debounced search input with 300ms delay
+Recent searches stored locally — last 10 searches
+Trending dishes section
+Filter bottom sheet: distance slider, price range, minimum rating, category, delivery or pickup toggle
+Results update live as filters change
+11. Daily Post Detail
+Photo carousel with dot indicators and pinch-to-zoom
+Quantity selector with max cap at remaining_quantity
+Real-time remaining quantity counter
+Live deadline countdown timer
+Chef avatar, name, and rating — tappable to open chef profile
+Delivery or pickup toggle
+Payment toggle: Pay Now or Pay on Delivery
+Comments section with pagination and optimistic like button
+Add to Cart button — disabled and labeled Sold Out or Order Closed when appropriate
+Share post button
+12. Chef Profile
+Cover photo, profile photo, kitchen name, bio, specialty tags
+Rating with breakdown bar chart, total reviews, total orders fulfilled, response rate
+Verified badge if chef is verified
+Follow and Unfollow button with instant UI update and counter
+Today's Special card pinned at top if chef has posted today
+Three tabs: Today, Prep Menu, Specialties
+Today tab: today's active post or empty state
+Prep Menu tab: browsable list of what chef can cook on request — each item has Request button
+Specialties tab: full catalog grid — each item has Pre-Order button
+Archive grid of all past posts at bottom
+Share profile button
+13. Prep Request Screen
+Selected menu item shown at top with photo and name
+Date and time picker — only future dates allowed, minimum notice enforced
+Quantity input
+Price field — shows base price, editable if item is price_negotiable
+Special instructions text field
+Submit Request button — creates prep_request record
+Chef receives push notification immediately
+Customer sees request in My Orders → Pending tab
+14. Prep Request Detail & Conversation
+Full request details: dish, date, quantity, price, note
+Current status badge: Pending / Accepted / Rejected / Counter-Offer
+Message thread between customer and chef
+If status is Counter-Offer: show chef's proposed price or date with Accept or Decline buttons
+If accepted: Pay Now button appears to complete payment
+15. Specialty Pre-Order Screen
+Selected specialty shown with all details
+Calendar picker for desired date — unavailable dates are grayed out
+Time slot selector based on chef's schedule
+Quantity input
+Special instructions field
+Price range shown — final price confirmed by chef
+Submit Pre-Order button
+16. Cart
+Items grouped by chef
+Quantity controls with real-time total update
+Item-level notes field per item
+Swipe to delete item
+Promo code input with API validation
+Delivery fee calculated based on address and chef settings
+Subtotal, delivery fee, discount, and grand total breakdown
+Proceed to Checkout button
+17. Checkout
+Delivery address with Google Maps picker and manual input option
+Time slot selector — ASAP or Schedule for a specific time
+Payment method: saved card, add new card, or Cash on Delivery
+Full order summary with expand and collapse
+Place Order CTA — creates order and triggers chef notification
+18. Payment (Stripe)
+PCI-compliant card input using Stripe SDK elements
+Card number, expiry, CVV, and name on card
+Save card for future orders toggle
+3D Secure support for banks that require it
+On success → Order Confirmation screen
+On failure → error message with retry option
+19. Order Confirmation
+Lottie success animation
+Order number displayed prominently
+Estimated preparation and delivery time
+Chef name and dish summary
+Track Order and Back to Home buttons
+Push notification sent to customer as confirmation
+20. Order Tracking
+Live status stepper: Order Received → Being Prepared → Ready → Out for Delivery → Delivered
+Each step shows timestamp when it was reached
+Status updates via real-time listener on order record
+Map view for delivery orders
+Contact chef option
+Order details summary collapsed at bottom
+21. My Orders
+Tabs: Active, Pending Requests, Scheduled, Past
+Active tab: live status badges on instant orders
+Pending Requests tab: prep requests and pre-orders awaiting chef response
+Scheduled tab: accepted prep and pre-orders with upcoming dates
+Past tab: completed orders with Leave Review or Reorder CTA
+22. Leave a Review
+Can only be submitted once per order — button disappears after submission
+Star rating is required: overall, taste, packaging, accuracy
+Written review is optional
+Photo upload optional — up to 3 photos
+After submission, review appears immediately on chef profile
+23–30. Supporting Customer Screens
+Saved & Favorites: two tabs — Saved Chefs and Saved Dishes
+Customer Profile: stats, edit profile, addresses, payment methods
+Edit Profile: photo, name, phone, email, change password
+My Addresses: list, add with map picker, set default
+Notifications: grouped by Today and Earlier, tap to navigate to relevant screen
+Settings: notification toggles, language, dark and light mode, privacy, logout, delete account
+Help & Support: FAQ accordion, contact us, report a problem form
+Home Chef (Seller) Screens
+31. Chef Onboarding Setup
+Step-by-step flow after selecting Sell My Food
+Step 1: Kitchen name and bio
+Step 2: Specialty category tags
+Step 3: Profile photo and cover photo upload
+Step 4: City and area
+Step 5: Food safety guidelines agreement
+Progress indicator showing current step
+32. Chef Dashboard
+Today's summary: active orders count, today's earnings, post status
+If no post today: prominent Post Today's Special button
+If post exists: Edit Post button and live orders counter
+Quick stats: this week's earnings, total orders this month
+Incoming orders list — most recent 5 with quick action buttons
+Pending prep requests badge
+33. Create Daily Post
+Multi-photo upload with drag-to-reorder — up to 8 photos
+Dish name and description fields
+Price input with currency formatting
+Available quantity input
+Order deadline time picker — must be today and in the future
+Delivery available toggle and pickup available toggle — at least one required
+Preview screen shows exactly how post will look to customers
+Publish button — on publish, all followers receive push notification
+Save as draft option
+34. Manage Daily Post
+Edit any field of active post
+Mark as Sold Out manually
+Delete post with confirmation dialog
+View real-time orders coming in for this post
+35. Prep Menu Management
+List of all prep menu items with edit and toggle active buttons
+Add new item form: name, description, photos, base price, negotiable toggle, min quantity, min notice hours
+Reorder items by drag and drop
+36. Specialty Catalog Management
+Grid view of all specialties with edit button
+Add new specialty: name, description, photos, price range, prep time, availability type, category
+Set availability calendar — mark dates as unavailable
+37. Orders Management
+Live list with real-time updates
+Filter tabs: All, New, Preparing, Ready, Delivered
+Each order card: customer name, dish, quantity, time, payment status
+Action buttons: Mark as Preparing, Mark as Ready, Mark as Delivered
+Each status change triggers automatic push notification to customer
+Contact customer: call or in-app message
+38. Prep Requests Management
+Incoming prep requests with full details
+Accept with confirmed price and date
+Reject with optional reason message
+Counter-offer with different price or date
+Message thread per request for communication with customer
+Filter by status: pending, accepted, rejected, countered
+39. Earnings Screen
+Total balance available for withdrawal
+Bar chart: daily earnings over current week
+Toggle between weekly and monthly view
+All-time total orders and total earned
+Per-order earnings list — tappable to see order detail
+Withdraw button — minimum withdrawal amount validation
+Bank account or wallet setup form
+40. Reviews Received
+Overall rating average with star breakdown bar chart
+All written reviews with customer name, date, and photos
+Reply to review text field — one reply per review
+Filter by star rating
+41. Chef Settings
+Open and Closed availability toggle — affects whether new orders can be placed
+Delivery radius slider on map
+Working days and hours scheduler
+Notification preferences
+Account settings: update profile, change password
+Help and support, logout
+8. ADVANCED FEATURES
+Flash Sales
+Chef can create a time-limited discount on any daily post
+Discount percentage and start and end time
+Post shows Flash Sale badge with countdown timer in feed
+Original price shown crossed out with discounted price
+All nearby users who follow that chef receive push notification
+Group Orders
+Customer creates a group order for a prep menu item with a target quantity
+Shares a link or invite code with friends
+Participants join and add their individual quantities
+When target quantity is reached, group order is submitted to chef
+All participants receive updates on group progress and order status
+Chef sees group order as a single order with total quantity
+Waitlist
+When a daily post sells out, customer can join the waitlist
+If another customer cancels, first person on waitlist receives immediate push notification
+Notification includes a deep link to the post with a 15-minute window to order
+If they do not order within 15 minutes, next person on waitlist is notified
+Weekly Subscriptions
+Customer subscribes to a specific chef for a recurring weekly or biweekly order
+Customer selects preferred day, quantity, and item from prep menu or specialties
+Chef receives automatic prep request each cycle
+Subscriber gets a loyalty discount negotiated with chef
+Customer can pause or cancel subscription at any time
+Coming Soon — Teaser Posts
+Chef posts a photo or description of what they will make tomorrow
+Customers tap Interested button
+When chef publishes the actual post, all interested customers receive push notification
+Teasers appear on chef profile with Interested count
+Smart Price Suggestions for Chefs
+When creating a post or prep menu item, app suggests a price range
+Based on similar dishes in the same area and category
+Shown as a gentle tip — chef can accept or ignore
+Dispute Resolution
+Customer opens a dispute if order did not arrive, was wrong, or had quality issues
+Customer selects reason from list and adds photos as evidence
+Platform holds payment until dispute is resolved
+Chef is notified and can respond within 24 hours
+If no response within 24 hours, refund is issued automatically
+Platform admin can intervene on escalated disputes
+9. REAL-TIME FEATURES
+The following must update live across all connected clients without requiring a manual refresh. Use Supabase Realtime subscriptions or Firestore onSnapshot listeners.
+Remaining quantity on post cards and detail screens
+Order status changes for both customer tracking screen and chef order list
+New order appearing in chef's incoming orders list
+Prep request status changes
+Comment likes count
+New comments appearing on a live post
+Sold Out and Closed states on feed cards
+Group order participant count and total quantity
+Flash sale countdown timer
+10. PUSH NOTIFICATION TRIGGER MAP
+Event
+Recipient
+Message
+New order placed
+Chef
+You have a new order from [Customer Name]
+Order status updated
+Customer
+Your order is now [status]
+Chef posts daily special
+All followers
+[Chef Name] just posted today's special!
+Flash sale started
+Nearby users
+[Chef Name] just dropped a flash sale — [X]% off!
+Prep request received
+Chef
+[Customer] wants to request [dish name]
+Prep request responded
+Customer
+Your request was [accepted / rejected / countered]
+Pre-order confirmed
+Customer
+Your pre-order is confirmed for [date]
+New review received
+Chef
+[Customer] left you a [X]-star review
+Waitlist slot opened
+Customer
+A spot opened up for [dish]! Order in 15 minutes
+Order confirmed
+Customer
+Order confirmed! Estimated time: [X] mins
+Group order target reached
+All participants
+Group order is complete and submitted!
+Subscription order created
+Customer
+Your weekly order from [Chef] is confirmed
+Coming soon post reaction
+Interested customers
+[Chef] just posted the dish you were waiting for!
+Dispute resolution
+Both parties
+Update on your dispute for order #[id]
+11. GLOBAL COMPONENTS & STATES
+Bottom Navigation Bar
+Customer version: Home, Explore, Orders, Saved, Profile
+Chef version: Dashboard, Orders, Post, Earnings, Profile
+Unread notifications badge on Orders tab
+Active tab indicator using design system accent color
+Empty States
+No posts in feed — invite to follow more chefs
+No orders yet — prompt to explore the feed
+No prep requests — prompt to browse prep menus
+No reviews yet — explain that reviews appear after completed orders
+No search results — suggest alternative filters
+No notifications — all caught up illustration
+All empty states must have illustration, friendly message, and action button
+Loading & Error States
+Shimmer skeleton cards for feed, profile, and order list screens
+No internet banner that appears at top of screen automatically
+Something went wrong screen with Retry button
+All API calls must have loading state and error state handled
+Modals & Bottom Sheets
+Confirmation dialogs: cancel order, delete post, unfollow chef, logout, delete account
+Filter bottom sheet on search and feed screens
+Full-screen image viewer with pinch-to-zoom and swipe to close
+Toast notifications: success green, error red, info warm yellow
+Action sheet: share, report, copy link
+12. PERFORMANCE & SECURITY REQUIREMENTS
+Performance
+App cold start under 3 seconds
+Image lazy loading with blur-up placeholder while loading
+All images compressed and served via CDN
+Feed pagination with infinite scroll — no full page reloads
+Optimistic UI updates for likes, follows, and cart actions
+Offline state detection with automatic retry on reconnect
+Security
+All API routes protected with JWT authentication
+Chef-only endpoints reject requests from customer role tokens
+Users can only read and modify their own private records
+File uploads validated for type — images only — and size — max 5MB per image
+Input sanitization on all text fields
+Rate limiting on all auth endpoints
+OTP expires after 10 minutes
+Stripe PCI compliance — never log or store raw card numbers
+13. ADDITIONAL REQUIREMENTS
+Full Arabic and English support with RTL layout switching for Arabic
+Dark mode support using the design system's dark palette
+Proper keyboard handling on all forms — screen scrolls up when keyboard opens
+Correct keyboard type per field: numeric for phone and price, email for email, default for text
+App must work on iOS 14 and above and Android 8 and above
+Every destructive action must show a confirmation dialog before executing
+No blank white screens — every data-fetching screen has a skeleton loading state
+Deep linking support: every major screen must be reachable via a URL scheme for push notification navigation
+Analytics events on key actions: sign up, post created, order placed, review submitted
+HomeChef
+The UI design is provided via the attached Stitch file.
+Implement every screen pixel-perfect with full business logic as described in this document.

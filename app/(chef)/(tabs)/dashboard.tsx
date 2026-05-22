@@ -125,6 +125,24 @@ export default function DashboardScreen() {
         {/* Post CTA */}
         <Button title={`📝  ${t('chef.post_special')}`} onPress={() => router.push('/(chef)/create-post')} size="lg" />
 
+        {/* Quick Actions */}
+        <View style={styles.quickActions}>
+          {[
+            { icon: 'hand-left', label: 'Requests', route: '/(chef)/prep-requests', bg: '#fef3c7', color: '#b45309', count: pendingOrders.length },
+            { icon: 'flash', label: 'Flash Sale', route: '/(chef)/flash-sale', bg: '#fce4ec', color: '#dc2626' },
+            { icon: 'megaphone', label: 'Teaser', route: '/(chef)/teaser', bg: '#e0e7ff', color: '#4338ca' },
+            { icon: 'star-half', label: 'Reviews', route: '/(chef)/reviews', bg: '#dcfce7', color: '#16a34a' },
+          ].map((action) => (
+            <TouchableOpacity key={action.label} style={[styles.quickCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}
+              onPress={() => router.push(action.route as any)}>
+              <View style={[styles.quickIcon, { backgroundColor: action.bg }]}>
+                <Ionicons name={action.icon as any} size={18} color={action.color} />
+              </View>
+              <Text style={{ color: colors.onSurface, fontSize: 11, fontWeight: '600', marginTop: 6 }}>{action.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {/* Recent orders */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>{t('chef.recent_orders')}</Text>
@@ -182,6 +200,9 @@ const styles = StyleSheet.create({
   statIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   statValue: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 22, fontWeight: '700' },
   statLabel: { fontFamily: 'PlusJakartaSans-Regular', fontSize: 12, marginTop: 2 },
+  quickActions: { flexDirection: 'row', gap: 10, marginTop: 16, marginBottom: 8 },
+  quickCard: { flex: 1, alignItems: 'center', paddingVertical: 14, borderRadius: 14 },
+  quickIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 12 },
   sectionTitle: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 17, fontWeight: '600' },
   orderRow: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 14, marginBottom: 8, gap: 12 },

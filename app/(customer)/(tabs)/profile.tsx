@@ -100,14 +100,19 @@ export default function ProfileScreen() {
   };
 
   const MENU_ITEMS = [
-    { icon: 'person-outline', label: t('profile.edit'), action: () => { setEditName(profile?.full_name || ''); setEditPhone(profile?.phone || ''); setEditCity(profile?.city || ''); setEditArea(profile?.area || ''); setShowEditModal(true); } },
+    { icon: 'person-outline', label: t('profile.edit'), route: '/(customer)/edit-profile' },
     { icon: 'heart-outline', label: t('saved.title'), route: '/(customer)/saved' },
     { icon: 'notifications-outline', label: t('notifications.title'), route: '/(customer)/notifications' },
-    { icon: 'language-outline', label: `${t('profile.language')} — ${currentLanguage === 'en' ? 'English' : 'العربية'}`, action: () => setShowLangModal(true) },
-    { icon: themeMode === 'dark' ? 'moon' : themeMode === 'light' ? 'sunny' : 'contrast-outline', label: `${currentLanguage === 'en' ? 'Theme' : 'المظهر'} — ${themeMode === 'system' ? (currentLanguage === 'en' ? 'System' : 'النظام') : themeMode === 'dark' ? (currentLanguage === 'en' ? 'Dark' : 'داكن') : (currentLanguage === 'en' ? 'Light' : 'فاتح')}`, action: () => setShowThemeModal(true) },
+    { icon: 'location-outline', label: currentLanguage === 'en' ? 'My Addresses' : 'عناويني', route: '/(customer)/addresses' },
+    { icon: 'restaurant-outline', label: currentLanguage === 'en' ? 'Prep Requests' : 'طلبات التحضير', route: '/(customer)/prep-request' },
+    { icon: 'people-outline', label: currentLanguage === 'en' ? 'Group Orders' : 'طلبات جماعية', route: '/(customer)/group-orders' },
+    { icon: 'repeat-outline', label: currentLanguage === 'en' ? 'Subscriptions' : 'الاشتراكات', route: '/(customer)/subscriptions' },
+    { icon: 'shield-checkmark-outline', label: currentLanguage === 'en' ? 'Disputes' : 'النزاعات', route: '/(customer)/dispute' },
     { icon: 'map-outline', label: currentLanguage === 'en' ? 'Nearby Chefs Map' : 'خريطة الطباخين', route: '/(customer)/explore-map' },
-    { icon: 'help-circle-outline', label: currentLanguage === 'en' ? 'Help & About' : 'المساعدة والمعلومات', route: '/(customer)/about' },
+    { icon: 'settings-outline', label: currentLanguage === 'en' ? 'Settings' : 'الإعدادات', route: '/(customer)/settings' },
+    { icon: 'help-circle-outline', label: currentLanguage === 'en' ? 'Help & Support' : 'المساعدة والدعم', route: '/(customer)/help' },
   ];
+
 
   const handleLogout = () => {
     crossAlert(t('auth.logout'), currentLanguage === 'en' ? 'Are you sure you want to log out?' : 'هل أنت متأكد من تسجيل الخروج؟', [

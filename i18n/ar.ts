@@ -217,4 +217,168 @@ export default {
     submit: 'إرسال التقييم',
     thanks: 'شكراً على تقييمك!',
   },
+
+  // Prep Requests (Mode 2)
+  prep: {
+    title: 'طلب تحضير',
+    menu: 'قائمة التحضير',
+    request: 'طلب',
+    requests: 'طلبات التحضير',
+    date: 'متى تريده؟',
+    quantity: 'الكمية',
+    your_offer: 'عرضك',
+    instructions: 'تعليمات خاصة',
+    summary: 'ملخص الطلب',
+    submit: 'إرسال الطلب',
+    sent: 'تم إرسال الطلب للطباخ!',
+    pending: 'قيد الانتظار',
+    accepted: 'مقبول',
+    rejected: 'مرفوض',
+    countered: 'عرض مضاد',
+    counter_price: 'السعر المضاد',
+    counter_date: 'التاريخ المضاد',
+    accept: 'قبول',
+    reject: 'رفض',
+    respond: 'الرد',
+    negotiable: 'قابل للتفاوض',
+    min_notice: 'الحد الأدنى للإشعار',
+  },
+
+  // Specialties (Mode 3)
+  specialties: {
+    title: 'التخصصات',
+    preorder: 'طلب مسبق',
+    select_date: 'اختر تاريخ',
+    select_time: 'اختر وقت',
+    price_range: 'نطاق السعر',
+    prep_time: 'وقت التحضير',
+    always: 'متاح دائماً',
+    seasonal: 'موسمي',
+    on_request: 'حسب الطلب',
+    category: 'الفئة',
+    submit: 'تأكيد الطلب المسبق',
+  },
+
+  // Flash Sales
+  flash_sale: {
+    title: 'تخفيض سريع',
+    live: 'تخفيضات مباشرة',
+    select_post: 'اختر منشور اليوم',
+    discount: 'نسبة الخصم',
+    duration: 'المدة',
+    preview: 'معاينة',
+    launch: 'إطلاق التخفيض',
+    off: 'خصم',
+  },
+
+  // Group Orders
+  group_orders: {
+    title: 'طلبات جماعية',
+    join: 'انضمام',
+    invite_code: 'رمز الدعوة',
+    target: 'الهدف',
+    reached: 'تم الوصول للهدف!',
+    time_left: 'متبقي',
+    join_code: 'لديك رمز دعوة؟',
+    progress: 'التقدم',
+  },
+
+  // Subscriptions
+  subscriptions: {
+    title: 'الاشتراكات',
+    active: 'نشطة',
+    paused: 'متوقفة',
+    pause: 'إيقاف',
+    resume: 'استئناف',
+    cancel_sub: 'إلغاء الاشتراك',
+    loyalty: 'خصم الولاء',
+    next_order: 'الطلب القادم',
+    weekly: 'أسبوعي',
+    biweekly: 'كل أسبوعين',
+  },
+
+  // Teasers
+  teasers: {
+    title: 'قريباً',
+    interested: 'أنا مهتم!',
+    publish: 'نشر الإعلان',
+    planned_date: 'التاريخ المخطط',
+  },
+
+  // Disputes
+  disputes: {
+    title: 'النزاعات',
+    open: 'فتح نزاع',
+    reason: 'السبب',
+    not_delivered: 'لم يتم التوصيل',
+    wrong_order: 'طلب خاطئ',
+    quality_issue: 'مشكلة في الجودة',
+    late_delivery: 'تأخر في التوصيل',
+    other: 'مشكلة أخرى',
+    description: 'اشرح ما حدث',
+    submit: 'إرسال النزاع',
+    chef_response: 'رد الطباخ',
+    resolution: 'الحل',
+  },
+
+  // Settings
+  settings: {
+    title: 'الإعدادات',
+    dark_mode: 'الوضع الداكن',
+    language: 'اللغة',
+    order_updates: 'تحديثات الطلبات',
+    promotions: 'العروض',
+    messages: 'الرسائل',
+    edit_profile: 'تعديل الملف',
+    my_addresses: 'عناويني',
+    privacy: 'الخصوصية',
+    help: 'المساعدة والدعم',
+    about: 'عن التطبيق',
+    logout: 'تسجيل الخروج',
+    delete_account: 'حذف الحساب',
+  },
+
+  // Addresses
+  addresses: {
+    title: 'عناويني',
+    add: 'إضافة عنوان',
+    label: 'التسمية',
+    full_address: 'العنوان الكامل',
+    detect: 'تحديد الموقع تلقائياً',
+    set_default: 'تعيين كافتراضي',
+    default: 'الافتراضي',
+  },
+
+  // Help
+  help: {
+    title: 'المساعدة والدعم',
+    contact: 'اتصل بنا',
+    report: 'إبلاغ عن مشكلة',
+    faq: 'الأسئلة الشائعة',
+    submit_report: 'إرسال البلاغ',
+  },
+
+  // Order Confirmation
+  confirmation: {
+    title: 'تم تأكيد الطلب!',
+    order_number: 'رقم الطلب',
+    estimated_time: 'الوقت المتوقع',
+    track: 'تتبع طلبي',
+    back_home: 'العودة للرئيسية',
+  },
+
+  // Manage Post (Chef)
+  manage_post: {
+    title: 'إدارة المنشور',
+    sold_out: 'تحديد كمباع',
+    orders_for_post: 'طلبات هذا المنشور',
+  },
+
+  // Chef Reviews
+  chef_reviews: {
+    title: 'التقييمات',
+    reply: 'الرد',
+    your_reply: 'ردك',
+    filter_by: 'تصفية حسب التقييم',
+  },
 };

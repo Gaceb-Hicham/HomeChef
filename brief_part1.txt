@@ -1,0 +1,200 @@
+﻿­ƒì¢
+HomeChef
+Homemade Food Marketplace
+Full Product Development Brief for Antigravity
+2 User Roles
+Customer & Home Chef
+3 Order Modes
+Instant ┬À Prep Request ┬À Pre-order
+50+ Screens
+Full UI implementation
+1. PROJECT OVERVIEW
+Build a complete, production-ready mobile application called HomeChef ÔÇö a homemade food marketplace that connects home-based cooks, bakers, and dessert makers with local customers looking for authentic, handcrafted meals.
+This is NOT a restaurant or grocery delivery app. It is a personal, community-driven platform where home cooks share what they make, and customers discover real food from real people nearby.
+The UI design is fully provided via the attached Stitch design file. Your job is to implement it completely ÔÇö pixel-perfect ÔÇö with all business logic, navigation flows, state management, real-time updates, and API integrations.
+Core Concept
+A home baker who makes donuts or tiramisu has no storefront ÔÇö they currently rely on social media and word of mouth. HomeChef gives them a professional platform to:
+Post what they are making today with photos, price, and available quantity
+Receive preparation requests for dishes they can cook on demand
+Showcase their full specialty menu for advance pre-orders
+Manage orders, earnings, and customer relationships in one place
+Customers get to:
+Discover homemade food nearby updated daily
+Order before it sells out with real-time availability
+Request custom preparation for a future date
+Pre-order from a chef's specialty menu for any occasion
+2. TECH STACK REQUIREMENTS
+Category
+Requirement
+Framework
+React Native (Expo) or Flutter ÔÇö whichever produces the most faithful result to the provided design
+Backend / API
+Supabase or Firebase for auth, database, storage, and real-time
+State Management
+Zustand or Redux Toolkit
+Navigation
+React Navigation (Stack + Bottom Tabs) or Go Router for Flutter
+Maps
+Google Maps API or Mapbox
+Payments
+Stripe API for card payments + Cash on Delivery option
+Push Notifications
+Expo Notifications or Firebase Cloud Messaging (FCM)
+Image Storage
+Supabase Storage or Firebase Storage with CDN delivery
+Real-time
+Supabase Realtime or Firestore onSnapshot for live order tracking
+SMS / OTP
+Twilio or Supabase Auth phone verification
+Localization
+i18n with full Arabic (RTL) and English (LTR) support
+3. USER ROLES & AUTHENTICATION
+Two Distinct User Roles
+CUSTOMER
+HOME CHEF (SELLER)
+Browse and discover daily posts
+Place instant, prep, and pre-orders
+Track orders in real-time
+Review chefs and dishes
+Save favorites and follow chefs
+Create a personal storefront profile
+Post daily offerings with quantity & deadline
+Accept or reject prep requests
+Manage specialty menu for pre-orders
+Track earnings and manage withdrawals
+Authentication Flows
+Email + password registration and login
+Phone number + OTP verification via SMS (Twilio or Supabase Auth)
+Google OAuth and Apple OAuth login
+Role selection during onboarding ÔÇö Customer or Chef
+JWT token management with auto refresh and persistent session
+Forgot password ÔåÆ OTP code ÔåÆ reset password flow
+Account lock after 5 failed login attempts with cooldown timer
+Account deletion with full data wipe
+4. THE THREE ORDER MODES (CORE BUSINESS LOGIC)
+This is the heart of the application. Three distinct ordering modes must coexist seamlessly within the same platform.
+Mode 1 ÔÇö Instant Order (Daily Post)
+The chef posts what they have prepared today. Customers order from what is currently available.
+Chef publishes a daily post with photos, price, available quantity, and order deadline
+Post appears live in all followers' feeds and nearby discovery feed
+Real-time remaining quantity counter counts down as orders come in
+Countdown timer shows time remaining until order deadline
+When quantity reaches zero or deadline passes, post automatically shows Sold Out or Closed
+Payment: Pay Now via card or Pay on Delivery
+Mode 2 ÔÇö Preparation Request
+The chef lists what they are capable of preparing. The customer requests a specific dish for a future date and the chef approves or rejects.
+Chef maintains a Preparation Menu ÔÇö a list of dishes they can cook on request
+Each item in the prep menu has: name, description, photos, base price, minimum order quantity, minimum notice time in hours
+Customer browses the prep menu on the chef's profile and selects a dish
+Customer fills a request form: desired date and time, quantity, special instructions, and budget if negotiable
+Chef receives push notification with full request details
+Chef can: Accept with confirmed price and time, Reject with an optional reason, or Counter-offer with a different price or date
+Customer receives push notification with the chef's response
+If accepted: order is created and payment is processed or scheduled
+Full conversation thread between customer and chef on the request
+Mode 3 ÔÇö Specialty Pre-Order
+The chef's profile displays everything they are known for. Customers browse this catalog and place advance orders for any item regardless of whether it was posted today.
+Chef maintains a Specialties Catalog ÔÇö their complete portfolio of offerings
+Each specialty has: photos, description, price range, typical preparation time, availability (always available / seasonal / on request)
+Customer taps any specialty item and selects a future date from a calendar picker
+System checks chef's availability calendar and blocks unavailable dates
+Order is submitted as a pre-order and chef confirms or suggests an alternative date
+Ideal for occasions: birthdays, gatherings, events ÔÇö where planning ahead is necessary
+5. DATABASE SCHEMA
+Core Tables
+users
+Field
+Type
+Notes
+id
+uuid PK
+auto-generated
+full_name
+varchar
+required
+email
+varchar unique
+required
+phone
+varchar unique
+required for OTP
+role
+enum
+customer / chef
+profile_photo_url
+text
+CDN URL
+city
+varchar
+area
+varchar
+latitude
+decimal
+from location permission
+longitude
+decimal
+from location permission
+is_verified
+boolean
+phone verified
+is_active
+boolean
+account status
+created_at
+timestamp
+chef_profiles
+Field
+Type
+Notes
+id
+uuid PK
+user_id
+uuid FK ÔåÆ users
+kitchen_name
+varchar
+display name
+bio
+text
+chef story
+specialty_tags
+text[]
+array of tags
+cover_photo_url
+text
+CDN URL
+rating_average
+decimal
+calculated field
+total_reviews
+integer
+counter
+total_orders_fulfilled
+integer
+counter
+response_rate
+decimal
+percentage
+is_open
+boolean
+accepting orders now
+is_verified
+boolean
+platform badge
+delivery_radius_km
+decimal
+created_at
+timestamp
+daily_posts
+Field
+Type
+Notes
+id
+uuid PK
+chef_id
+uuid FK
+title
+varchar
+dish name
+description
+text
+photos

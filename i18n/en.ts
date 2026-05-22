@@ -217,4 +217,168 @@ export default {
     submit: 'Submit Review',
     thanks: 'Thank you for your review!',
   },
+
+  // Prep Requests (Mode 2)
+  prep: {
+    title: 'Preparation Request',
+    menu: 'Prep Menu',
+    request: 'Request',
+    requests: 'Prep Requests',
+    date: 'When do you want it?',
+    quantity: 'Quantity',
+    your_offer: 'Your Offer',
+    instructions: 'Special Instructions',
+    summary: 'Request Summary',
+    submit: 'Submit Request',
+    sent: 'Request sent to chef!',
+    pending: 'Pending',
+    accepted: 'Accepted',
+    rejected: 'Rejected',
+    countered: 'Counter-Offer',
+    counter_price: 'Counter Price',
+    counter_date: 'Counter Date',
+    accept: 'Accept',
+    reject: 'Reject',
+    respond: 'Respond',
+    negotiable: 'Negotiable',
+    min_notice: 'Minimum Notice',
+  },
+
+  // Specialties (Mode 3)
+  specialties: {
+    title: 'Specialties',
+    preorder: 'Pre-Order',
+    select_date: 'Select a Date',
+    select_time: 'Select a Time',
+    price_range: 'Price Range',
+    prep_time: 'Prep Time',
+    always: 'Always Available',
+    seasonal: 'Seasonal',
+    on_request: 'On Request',
+    category: 'Category',
+    submit: 'Submit Pre-Order',
+  },
+
+  // Flash Sales
+  flash_sale: {
+    title: 'Flash Sale',
+    live: 'LIVE Flash Sales',
+    select_post: 'Select Today\'s Post',
+    discount: 'Discount Percentage',
+    duration: 'Duration',
+    preview: 'Preview',
+    launch: 'Launch Flash Sale',
+    off: 'OFF',
+  },
+
+  // Group Orders
+  group_orders: {
+    title: 'Group Orders',
+    join: 'Join',
+    invite_code: 'Invite Code',
+    target: 'Target',
+    reached: 'Target Reached!',
+    time_left: 'left',
+    join_code: 'Have an Invite Code?',
+    progress: 'Progress',
+  },
+
+  // Subscriptions
+  subscriptions: {
+    title: 'Subscriptions',
+    active: 'Active',
+    paused: 'Paused',
+    pause: 'Pause',
+    resume: 'Resume',
+    cancel_sub: 'Cancel Subscription',
+    loyalty: 'loyalty discount',
+    next_order: 'Next order',
+    weekly: 'Weekly',
+    biweekly: 'Bi-weekly',
+  },
+
+  // Teasers
+  teasers: {
+    title: 'Coming Soon',
+    interested: 'I\'m Interested!',
+    publish: 'Publish Teaser',
+    planned_date: 'Planned Date',
+  },
+
+  // Disputes
+  disputes: {
+    title: 'Disputes',
+    open: 'Open a Dispute',
+    reason: 'Reason',
+    not_delivered: 'Order Not Delivered',
+    wrong_order: 'Wrong Order',
+    quality_issue: 'Quality Issue',
+    late_delivery: 'Late Delivery',
+    other: 'Other Issue',
+    description: 'Describe what happened',
+    submit: 'Submit Dispute',
+    chef_response: 'Chef Response',
+    resolution: 'Resolution',
+  },
+
+  // Settings
+  settings: {
+    title: 'Settings',
+    dark_mode: 'Dark Mode',
+    language: 'Language',
+    order_updates: 'Order Updates',
+    promotions: 'Promotions',
+    messages: 'Messages',
+    edit_profile: 'Edit Profile',
+    my_addresses: 'My Addresses',
+    privacy: 'Privacy',
+    help: 'Help & Support',
+    about: 'About',
+    logout: 'Logout',
+    delete_account: 'Delete Account',
+  },
+
+  // Addresses
+  addresses: {
+    title: 'My Addresses',
+    add: 'Add Address',
+    label: 'Label',
+    full_address: 'Full Address',
+    detect: 'Auto-detect Location',
+    set_default: 'Set Default',
+    default: 'DEFAULT',
+  },
+
+  // Help
+  help: {
+    title: 'Help & Support',
+    contact: 'Contact Us',
+    report: 'Report Issue',
+    faq: 'Frequently Asked Questions',
+    submit_report: 'Submit Report',
+  },
+
+  // Order Confirmation
+  confirmation: {
+    title: 'Order Confirmed!',
+    order_number: 'Order Number',
+    estimated_time: 'Estimated Time',
+    track: 'Track My Order',
+    back_home: 'Back to Home',
+  },
+
+  // Manage Post (Chef)
+  manage_post: {
+    title: 'Manage Post',
+    sold_out: 'Mark Sold Out',
+    orders_for_post: 'Orders for this post',
+  },
+
+  // Chef Reviews
+  chef_reviews: {
+    title: 'Reviews',
+    reply: 'Reply',
+    your_reply: 'Your Reply',
+    filter_by: 'Filter by rating',
+  },
 };

@@ -157,11 +157,16 @@ export default function ChefProfileScreen() {
 
   const MENU = [
     { icon: 'storefront-outline', label: 'Kitchen Settings', action: openEdit },
+    { icon: 'document-text-outline', label: 'Manage Post', route: '/(chef)/manage-post' },
+    { icon: 'restaurant-outline', label: 'Prep Menu', route: '/(chef)/prep-menu' },
+    { icon: 'star-outline', label: 'Specialties', route: '/(chef)/specialties' },
+    { icon: 'hand-left-outline', label: 'Prep Requests', route: '/(chef)/prep-requests' },
+    { icon: 'flash-outline', label: 'Flash Sales', route: '/(chef)/flash-sale' },
+    { icon: 'megaphone-outline', label: 'Teaser Post', route: '/(chef)/teaser' },
+    { icon: 'chatbubbles-outline', label: 'Reviews', route: '/(chef)/reviews' },
     { icon: 'images-outline', label: 'Kitchen Archive', route: '/(chef)/archive' },
     { icon: 'location-outline', label: chefProfile?.latitude ? `Location Set ✓` : 'Set Kitchen Location', action: handleSetLocation },
-    { icon: 'language-outline', label: `Language — ${currentLanguage === 'en' ? 'English' : 'العربية'}`, action: () => setShowLangModal(true) },
-    { icon: themeMode === 'dark' ? 'moon' : themeMode === 'light' ? 'sunny' : 'contrast-outline', label: `Theme — ${themeMode === 'system' ? 'System' : themeMode === 'dark' ? 'Dark' : 'Light'}`, action: () => setShowThemeModal(true) },
-    { icon: 'information-circle-outline', label: 'About HomeChef', action: () => infoAlert('HomeChef', 'A marketplace connecting home cooks with local customers.\n\nVersion 1.0.0') },
+    { icon: 'settings-outline', label: 'Settings', route: '/(chef)/settings' },
   ];
 
   return (
