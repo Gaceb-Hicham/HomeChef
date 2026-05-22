@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
@@ -18,6 +18,26 @@ export default function PrepRequestScreen() {
   const { t } = useLanguage();
   const { showToast } = useToast();
 
+  // If no params → show list mode. If params → show create mode.
+  const isCreateMode = !!params.itemId && !!params.chefId;
+
+  // ====== LIST MODE STATE ======
+  const [requests, setRequests] = useState<any[]>([]);
+  const [listLoading, setListLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isCreateMode && profile?.id) { fetchRequests(); }
+  }, [isCreateMode, profile?.id]);
+
+  const fetchRequests = async () => {
+    if (!profile?.id) return;
+    setListLoading(true);
+    const { data } = await prepRequestsApi.getByCustomer(profile.id);
+    setRequests(data || []);
+    setListLoading(false);
+  };
+
+  // ====== CREATE MODE STATE ======
   const [quantity, setQuantity] = useState(params.minQty || '1');
   const [price, setPrice] = useState(params.basePrice || '');
   const [note, setNote] = useState('');
@@ -60,6 +80,91 @@ export default function PrepRequestScreen() {
     }
   };
 
+  const STATUS_COLORS: Record<string, { color: string; bg: string; label: string }> = {
+    pending: { color: '#b45309', bg: '#fef3c7', label: 'Pending' },
+    accepted: { color: '#16a34a', bg: '#dcfce7', label: 'Accepted' },
+    rejected: { color: '#dc2626', bg: '#fce4ec', label: 'Rejected' },
+    countered: { color: '#4338ca', bg: '#e0e7ff', label: 'Counter Offer' },
+  };
+
+  // ====== LIST MODE ======
+  if (!isCreateMode) {
+    return (
+      <ScreenWrapper>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color={colors.onSurface} />
+            </TouchableOpacity>
+            <Text style={[styles.title, { color: colors.onBackground }]}>My Prep Requests</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          {listLoading ? (
+            <View style={{ alignItems: 'center', paddingVertical: 60 }}>
+              <Text style={{ color: colors.outline }}>Loading...</Text>
+            </View>
+          ) : requests.length === 0 ? (
+            <View style={{ alignItems: 'center', paddingVertical: 60 }}>
+              <Ionicons name="hand-left-outline" size={56} color={colors.outline} />
+              <Text style={{ color: colors.outline, fontSize: 16, marginTop: 12, fontWeight: '600' }}>No requests yet</Text>
+              <Text style={{ color: colors.outline, fontSize: 13, marginTop: 6, textAlign: 'center', lineHeight: 20, paddingHorizontal: 40 }}>
+                Browse a chef's prep menu and send a custom preparation request for any dish.
+              </Text>
+            </View>
+          ) : (
+            requests.map((req) => {
+              const st = STATUS_COLORS[req.status] || STATUS_COLORS.pending;
+              return (
+                <TouchableOpacity key={req.id}
+                  style={[styles.requestCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}
+                  onPress={() => router.push(`/(customer)/prep-request-detail/${req.id}`)}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text style={{ color: colors.onSurface, fontWeight: '700', fontSize: 15, flex: 1 }}>
+                      {req.menu_item?.title || 'Dish'}
+                    </Text>
+                    <View style={[styles.statusBadge, { backgroundColor: st.bg }]}>
+                      <Text style={{ color: st.color, fontSize: 11, fontWeight: '700' }}>{st.label}</Text>
+                    </View>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 16 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="calendar-outline" size={14} color={colors.outline} />
+                      <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
+                        {new Date(req.requested_date).toLocaleDateString()}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="cube-outline" size={14} color={colors.outline} />
+                      <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>x{req.quantity}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="cash-outline" size={14} color={colors.outline} />
+                      <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>
+                        {req.offered_price || '—'} DA
+                      </Text>
+                    </View>
+                  </View>
+                  {req.status === 'countered' && req.counter_price && (
+                    <View style={[styles.counterBanner, { backgroundColor: '#e0e7ff' }]}>
+                      <Ionicons name="swap-horizontal" size={14} color="#4338ca" />
+                      <Text style={{ color: '#4338ca', fontSize: 12, fontWeight: '600', marginLeft: 6 }}>
+                        Chef countered: {req.counter_price} DA
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })
+          )}
+          <View style={{ height: 30 }} />
+        </ScrollView>
+      </ScreenWrapper>
+    );
+  }
+
+  // ====== CREATE MODE ======
   return (
     <ScreenWrapper>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -206,4 +311,7 @@ const styles = StyleSheet.create({
   summary: { padding: 20, borderRadius: 16, marginBottom: 8 },
   summaryTitle: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 16, fontWeight: '600', marginBottom: 12 },
   sumRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  requestCard: { padding: 16, borderRadius: 16, marginBottom: 10 },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
+  counterBanner: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, marginTop: 10 },
 });

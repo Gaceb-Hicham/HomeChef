@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type UserRole = 'customer' | 'chef';
 
@@ -102,8 +103,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signInWithGoogle: async (role?: UserRole) => {
     try {
       // Store the selected role before OAuth redirect (survives page reload)
-      if (role && typeof window !== 'undefined') {
-        localStorage.setItem('homechef_google_role', role);
+      if (role) {
+        try { await AsyncStorage.setItem('homechef_google_role', role); } catch {}
       }
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -182,10 +183,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } else if (user.email) {
       // Check if a role was explicitly chosen before OAuth redirect (from signup page)
       let savedRole: string | null = null;
-      if (typeof window !== 'undefined') {
-        savedRole = localStorage.getItem('homechef_google_role');
-        if (savedRole) localStorage.removeItem('homechef_google_role');
-      }
+      try {
+        savedRole = await AsyncStorage.getItem('homechef_google_role');
+        if (savedRole) await AsyncStorage.removeItem('homechef_google_role');
+      } catch {}
 
       if (savedRole) {
         // Role was chosen on signup page → auto-create profile with that role

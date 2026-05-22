@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { ScreenWrapper, Button, Input } from '@/components/ui';
-import { ProfilePhotoUpload } from '@/components/ui/ProfilePhotoUpload';
+import { ProfilePhotoUpload } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { infoAlert } from '@/lib/crossAlert';
@@ -21,7 +21,7 @@ export default function EditProfileScreen() {
   const [phone, setPhone] = useState(profile?.phone || '');
   const [city, setCity] = useState(profile?.city || '');
   const [area, setArea] = useState(profile?.area || '');
-  const [photoUrl, setPhotoUrl] = useState(profile?.profile_photo_url || '');
+
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -32,12 +32,11 @@ export default function EditProfileScreen() {
     setIsLoading(true);
     const { error } = await supabase.from('users').update({
       full_name: name, phone, city, area,
-      profile_photo_url: photoUrl || null,
     }).eq('id', profile.id);
 
     if (error) { infoAlert('Error', error.message); }
     else {
-      setProfile({ ...profile, full_name: name, phone, city, area, profile_photo_url: photoUrl });
+      setProfile({ ...profile, full_name: name, phone, city, area });
       showToast('Profile updated!', 'success');
     }
     setIsLoading(false);
@@ -65,7 +64,7 @@ export default function EditProfileScreen() {
 
         {/* Photo */}
         <View style={{ alignItems: 'center', marginBottom: 24 }}>
-          <ProfilePhotoUpload currentUrl={photoUrl} onUpload={(url) => setPhotoUrl(url)} size={100} />
+          <ProfilePhotoUpload size={100} showLabel={false} />
           <Text style={{ color: colors.outline, fontSize: 12, marginTop: 8 }}>Tap to change photo</Text>
         </View>
 

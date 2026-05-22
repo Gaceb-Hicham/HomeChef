@@ -16,6 +16,10 @@ interface PaymentResult {
 
 /** Initialize Stripe on native */
 export async function initializePayments() {
+  if (!STRIPE_KEY) {
+    console.log('[Payments] No Stripe key configured — card payments disabled');
+    return;
+  }
   try {
     await initStripe({
       publishableKey: STRIPE_KEY,

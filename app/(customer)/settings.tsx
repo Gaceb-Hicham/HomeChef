@@ -13,10 +13,10 @@ import { supabase } from '@/lib/supabase';
 export default function SettingsScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
-  const { t, locale, setLocale } = useLanguage();
-  const isDark = useThemeStore((s) => s.isDark);
-  const toggleTheme = useThemeStore((s) => s.toggle);
-  const logout = useAuthStore((s) => s.logout);
+  const { t, currentLanguage, changeLanguage } = useLanguage();
+  const isDark = useThemeStore((s) => s.mode === 'dark');
+  const toggleTheme = () => useThemeStore.getState().setMode(useThemeStore.getState().mode === 'dark' ? 'light' : 'dark');
+  const signOut = useAuthStore((s) => s.signOut);
 
   const [notifOrders, setNotifOrders] = useState(true);
   const [notifPromos, setNotifPromos] = useState(true);
@@ -25,7 +25,7 @@ export default function SettingsScreen() {
   const handleLogout = () => {
     crossAlert('Logout', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', style: 'destructive', onPress: () => { logout(); router.replace('/(auth)/login'); } },
+      { text: 'Logout', style: 'destructive', onPress: () => { signOut(); router.replace('/(auth)/login'); } },
     ]);
   };
 
@@ -73,10 +73,10 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionLabel, { color: colors.outline }]}>APPEARANCE</Text>
         <View style={[styles.card, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
           <SettingRow icon="moon-outline" title="Dark Mode" right={<Switch value={isDark} onValueChange={toggleTheme} trackColor={{ true: colors.primary }} />} />
-          <SettingRow icon="language-outline" title="Language" subtitle={locale === 'ar' ? 'العربية' : 'English'}
+          <SettingRow icon="language-outline" title="Language" subtitle={currentLanguage === 'ar' ? 'العربية' : 'English'}
             right={
-              <TouchableOpacity style={[styles.langToggle, { backgroundColor: colors.primary }]} onPress={() => setLocale(locale === 'ar' ? 'en' : 'ar')}>
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>{locale === 'ar' ? 'EN' : 'AR'}</Text>
+              <TouchableOpacity style={[styles.langToggle, { backgroundColor: colors.primary }]} onPress={() => changeLanguage(currentLanguage === 'ar' ? 'en' : 'ar')}>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>{currentLanguage === 'ar' ? 'EN' : 'AR'}</Text>
               </TouchableOpacity>
             }
           />

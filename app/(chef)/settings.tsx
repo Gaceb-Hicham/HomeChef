@@ -14,11 +14,11 @@ import { useToast } from '@/components/ui/Toast';
 export default function ChefSettingsScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
-  const { locale, setLocale } = useLanguage();
-  const isDark = useThemeStore((s) => s.isDark);
-  const toggleTheme = useThemeStore((s) => s.toggle);
+  const { currentLanguage, changeLanguage } = useLanguage();
+  const isDark = useThemeStore((s) => s.mode === 'dark');
+  const toggleTheme = () => { const store = useThemeStore.getState(); store.setMode(store.mode === 'dark' ? 'light' : 'dark'); };
   const profile = useAuthStore((s) => s.profile);
-  const logout = useAuthStore((s) => s.logout);
+  const signOut = useAuthStore((s) => s.signOut);
   const { showToast } = useToast();
 
   const [isOpen, setIsOpen] = useState(true);
@@ -37,7 +37,7 @@ export default function ChefSettingsScreen() {
   const handleLogout = () => {
     crossAlert('Logout', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', style: 'destructive', onPress: () => { logout(); router.replace('/(auth)/login'); } },
+      { text: 'Logout', style: 'destructive', onPress: () => { signOut(); router.replace('/(auth)/login'); } },
     ]);
   };
 
@@ -99,9 +99,9 @@ export default function ChefSettingsScreen() {
         <Text style={[styles.sectionLabel, { color: colors.outline }]}>APPEARANCE</Text>
         <View style={[styles.card, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
           <Row icon="moon-outline" title="Dark Mode" right={<Switch value={isDark} onValueChange={toggleTheme} trackColor={{ true: colors.primary }} />} />
-          <Row icon="language-outline" title="Language" subtitle={locale === 'ar' ? 'العربية' : 'English'}
-            right={<TouchableOpacity style={[styles.langBtn, { backgroundColor: colors.primary }]} onPress={() => setLocale(locale === 'ar' ? 'en' : 'ar')}>
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>{locale === 'ar' ? 'EN' : 'AR'}</Text>
+          <Row icon="language-outline" title="Language" subtitle={currentLanguage === 'ar' ? 'العربية' : 'English'}
+            right={<TouchableOpacity style={[styles.langBtn, { backgroundColor: colors.primary }]} onPress={() => changeLanguage(currentLanguage === 'ar' ? 'en' : 'ar')}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>{currentLanguage === 'ar' ? 'EN' : 'AR'}</Text>
             </TouchableOpacity>} />
         </View>
 

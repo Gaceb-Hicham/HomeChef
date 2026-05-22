@@ -1,6 +1,6 @@
 -- =============================================================
--- HomeChef — Full Schema Upgrade Migration
--- Adds ALL missing tables and columns from Development Brief
+-- HomeChef — Full Schema Upgrade Migration (IDEMPOTENT)
+-- Safe to re-run multiple times — uses DROP IF EXISTS + CREATE
 -- Run this in Supabase SQL Editor AFTER the initial migration
 -- =============================================================
 
@@ -16,13 +16,13 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS longitude DECIMAL;
 ALTER TABLE public.chef_profiles ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;
 
 -- Orders: add order_type and reference_id for multi-mode support
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS order_type TEXT DEFAULT 'instant' CHECK (order_type IN ('instant', 'prep', 'preorder'));
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS order_type TEXT DEFAULT 'instant';
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS reference_id UUID;
 
 -- Reviews: add multi-category ratings and chef reply
-ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS taste_rating INTEGER CHECK (taste_rating >= 1 AND taste_rating <= 5);
-ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS packaging_rating INTEGER CHECK (packaging_rating >= 1 AND packaging_rating <= 5);
-ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS accuracy_rating INTEGER CHECK (accuracy_rating >= 1 AND accuracy_rating <= 5);
+ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS taste_rating INTEGER;
+ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS packaging_rating INTEGER;
+ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS accuracy_rating INTEGER;
 ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS chef_reply TEXT;
 ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS photos TEXT[] DEFAULT '{}';
 
@@ -47,9 +47,11 @@ CREATE TABLE IF NOT EXISTS public.prep_menu_items (
 
 ALTER TABLE public.prep_menu_items ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view active prep items" ON public.prep_menu_items;
 CREATE POLICY "Anyone can view active prep items"
   ON public.prep_menu_items FOR SELECT USING (is_active = true);
 
+DROP POLICY IF EXISTS "Chef can manage own prep items" ON public.prep_menu_items;
 CREATE POLICY "Chef can manage own prep items"
   ON public.prep_menu_items FOR ALL USING (auth.uid() = chef_id);
 
@@ -76,18 +78,23 @@ CREATE TABLE IF NOT EXISTS public.prep_requests (
 
 ALTER TABLE public.prep_requests ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Customer can view own prep requests" ON public.prep_requests;
 CREATE POLICY "Customer can view own prep requests"
   ON public.prep_requests FOR SELECT USING (auth.uid() = customer_id);
 
+DROP POLICY IF EXISTS "Chef can view incoming prep requests" ON public.prep_requests;
 CREATE POLICY "Chef can view incoming prep requests"
   ON public.prep_requests FOR SELECT USING (auth.uid() = chef_id);
 
+DROP POLICY IF EXISTS "Customer can create prep requests" ON public.prep_requests;
 CREATE POLICY "Customer can create prep requests"
   ON public.prep_requests FOR INSERT WITH CHECK (auth.uid() = customer_id);
 
+DROP POLICY IF EXISTS "Chef can update prep requests" ON public.prep_requests;
 CREATE POLICY "Chef can update prep requests"
   ON public.prep_requests FOR UPDATE USING (auth.uid() = chef_id);
 
+DROP POLICY IF EXISTS "Customer can update own prep requests" ON public.prep_requests;
 CREATE POLICY "Customer can update own prep requests"
   ON public.prep_requests FOR UPDATE USING (auth.uid() = customer_id);
 
@@ -112,9 +119,11 @@ CREATE TABLE IF NOT EXISTS public.chef_specialties (
 
 ALTER TABLE public.chef_specialties ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view active specialties" ON public.chef_specialties;
 CREATE POLICY "Anyone can view active specialties"
   ON public.chef_specialties FOR SELECT USING (is_active = true);
 
+DROP POLICY IF EXISTS "Chef can manage own specialties" ON public.chef_specialties;
 CREATE POLICY "Chef can manage own specialties"
   ON public.chef_specialties FOR ALL USING (auth.uid() = chef_id);
 
@@ -133,9 +142,11 @@ CREATE TABLE IF NOT EXISTS public.chef_availability (
 
 ALTER TABLE public.chef_availability ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view chef availability" ON public.chef_availability;
 CREATE POLICY "Anyone can view chef availability"
   ON public.chef_availability FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Chef can manage own availability" ON public.chef_availability;
 CREATE POLICY "Chef can manage own availability"
   ON public.chef_availability FOR ALL USING (auth.uid() = chef_id);
 
@@ -154,12 +165,15 @@ CREATE TABLE IF NOT EXISTS public.comments (
 
 ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view comments" ON public.comments;
 CREATE POLICY "Anyone can view comments"
   ON public.comments FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Users can create comments" ON public.comments;
 CREATE POLICY "Users can create comments"
   ON public.comments FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete own comments" ON public.comments;
 CREATE POLICY "Users can delete own comments"
   ON public.comments FOR DELETE USING (auth.uid() = user_id);
 
@@ -177,9 +191,11 @@ CREATE TABLE IF NOT EXISTS public.comment_likes (
 
 ALTER TABLE public.comment_likes ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view likes" ON public.comment_likes;
 CREATE POLICY "Anyone can view likes"
   ON public.comment_likes FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Users can toggle likes" ON public.comment_likes;
 CREATE POLICY "Users can toggle likes"
   ON public.comment_likes FOR ALL USING (auth.uid() = user_id);
 
@@ -199,6 +215,7 @@ CREATE TABLE IF NOT EXISTS public.payment_methods (
 
 ALTER TABLE public.payment_methods ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage own payment methods" ON public.payment_methods;
 CREATE POLICY "Users can manage own payment methods"
   ON public.payment_methods FOR ALL USING (auth.uid() = user_id);
 
@@ -217,6 +234,7 @@ CREATE TABLE IF NOT EXISTS public.earnings (
 
 ALTER TABLE public.earnings ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Chef can view own earnings" ON public.earnings;
 CREATE POLICY "Chef can view own earnings"
   ON public.earnings FOR SELECT USING (auth.uid() = chef_id);
 
@@ -235,9 +253,11 @@ CREATE TABLE IF NOT EXISTS public.withdrawals (
 
 ALTER TABLE public.withdrawals ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Chef can view own withdrawals" ON public.withdrawals;
 CREATE POLICY "Chef can view own withdrawals"
   ON public.withdrawals FOR SELECT USING (auth.uid() = chef_id);
 
+DROP POLICY IF EXISTS "Chef can request withdrawals" ON public.withdrawals;
 CREATE POLICY "Chef can request withdrawals"
   ON public.withdrawals FOR INSERT WITH CHECK (auth.uid() = chef_id);
 
@@ -258,9 +278,11 @@ CREATE TABLE IF NOT EXISTS public.flash_sales (
 
 ALTER TABLE public.flash_sales ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view active flash sales" ON public.flash_sales;
 CREATE POLICY "Anyone can view active flash sales"
   ON public.flash_sales FOR SELECT USING (is_active = true);
 
+DROP POLICY IF EXISTS "Chef can manage own flash sales" ON public.flash_sales;
 CREATE POLICY "Chef can manage own flash sales"
   ON public.flash_sales FOR ALL USING (auth.uid() = chef_id);
 
@@ -284,12 +306,15 @@ CREATE TABLE IF NOT EXISTS public.group_orders (
 
 ALTER TABLE public.group_orders ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view open group orders" ON public.group_orders;
 CREATE POLICY "Anyone can view open group orders"
   ON public.group_orders FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Users can create group orders" ON public.group_orders;
 CREATE POLICY "Users can create group orders"
   ON public.group_orders FOR INSERT WITH CHECK (auth.uid() = initiator_id);
 
+DROP POLICY IF EXISTS "Initiator can manage group order" ON public.group_orders;
 CREATE POLICY "Initiator can manage group order"
   ON public.group_orders FOR UPDATE USING (auth.uid() = initiator_id);
 
@@ -308,9 +333,11 @@ CREATE TABLE IF NOT EXISTS public.group_order_participants (
 
 ALTER TABLE public.group_order_participants ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view participants" ON public.group_order_participants;
 CREATE POLICY "Anyone can view participants"
   ON public.group_order_participants FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Users can join group orders" ON public.group_order_participants;
 CREATE POLICY "Users can join group orders"
   ON public.group_order_participants FOR INSERT WITH CHECK (auth.uid() = customer_id);
 
@@ -329,12 +356,15 @@ CREATE TABLE IF NOT EXISTS public.waitlist (
 
 ALTER TABLE public.waitlist ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own waitlist" ON public.waitlist;
 CREATE POLICY "Users can view own waitlist"
   ON public.waitlist FOR SELECT USING (auth.uid() = customer_id);
 
+DROP POLICY IF EXISTS "Users can join waitlist" ON public.waitlist;
 CREATE POLICY "Users can join waitlist"
   ON public.waitlist FOR INSERT WITH CHECK (auth.uid() = customer_id);
 
+DROP POLICY IF EXISTS "Users can leave waitlist" ON public.waitlist;
 CREATE POLICY "Users can leave waitlist"
   ON public.waitlist FOR DELETE USING (auth.uid() = customer_id);
 
@@ -360,12 +390,15 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
 
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Customer can view own subscriptions" ON public.subscriptions;
 CREATE POLICY "Customer can view own subscriptions"
   ON public.subscriptions FOR SELECT USING (auth.uid() = customer_id);
 
+DROP POLICY IF EXISTS "Chef can view incoming subscriptions" ON public.subscriptions;
 CREATE POLICY "Chef can view incoming subscriptions"
   ON public.subscriptions FOR SELECT USING (auth.uid() = chef_id);
 
+DROP POLICY IF EXISTS "Customer can manage subscriptions" ON public.subscriptions;
 CREATE POLICY "Customer can manage subscriptions"
   ON public.subscriptions FOR ALL USING (auth.uid() = customer_id);
 
@@ -388,9 +421,11 @@ CREATE TABLE IF NOT EXISTS public.teaser_posts (
 
 ALTER TABLE public.teaser_posts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view teasers" ON public.teaser_posts;
 CREATE POLICY "Anyone can view teasers"
   ON public.teaser_posts FOR SELECT USING (is_active = true);
 
+DROP POLICY IF EXISTS "Chef can manage own teasers" ON public.teaser_posts;
 CREATE POLICY "Chef can manage own teasers"
   ON public.teaser_posts FOR ALL USING (auth.uid() = chef_id);
 
@@ -408,9 +443,11 @@ CREATE TABLE IF NOT EXISTS public.teaser_interests (
 
 ALTER TABLE public.teaser_interests ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view interests" ON public.teaser_interests;
 CREATE POLICY "Anyone can view interests"
   ON public.teaser_interests FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Users can toggle interest" ON public.teaser_interests;
 CREATE POLICY "Users can toggle interest"
   ON public.teaser_interests FOR ALL USING (auth.uid() = customer_id);
 
@@ -436,17 +473,42 @@ CREATE TABLE IF NOT EXISTS public.disputes (
 
 ALTER TABLE public.disputes ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Customer can view own disputes" ON public.disputes;
 CREATE POLICY "Customer can view own disputes"
   ON public.disputes FOR SELECT USING (auth.uid() = customer_id);
 
+DROP POLICY IF EXISTS "Chef can view own disputes" ON public.disputes;
 CREATE POLICY "Chef can view own disputes"
   ON public.disputes FOR SELECT USING (auth.uid() = chef_id);
 
+DROP POLICY IF EXISTS "Customer can create disputes" ON public.disputes;
 CREATE POLICY "Customer can create disputes"
   ON public.disputes FOR INSERT WITH CHECK (auth.uid() = customer_id);
 
+DROP POLICY IF EXISTS "Chef can respond to disputes" ON public.disputes;
 CREATE POLICY "Chef can respond to disputes"
   ON public.disputes FOR UPDATE USING (auth.uid() = chef_id);
+
+
+-- ========================
+-- ADDRESSES TABLE
+-- ========================
+CREATE TABLE IF NOT EXISTS public.addresses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  label TEXT NOT NULL DEFAULT 'Home',
+  full_address TEXT NOT NULL,
+  latitude DECIMAL,
+  longitude DECIMAL,
+  is_default BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.addresses ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage own addresses" ON public.addresses;
+CREATE POLICY "Users can manage own addresses"
+  ON public.addresses FOR ALL USING (auth.uid() = user_id);
 
 
 -- ========================
@@ -465,16 +527,96 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_customer ON public.subscriptions(cu
 CREATE INDEX IF NOT EXISTS idx_subscriptions_chef ON public.subscriptions(chef_id);
 CREATE INDEX IF NOT EXISTS idx_disputes_order ON public.disputes(order_id);
 CREATE INDEX IF NOT EXISTS idx_teaser_posts_chef ON public.teaser_posts(chef_id);
+CREATE INDEX IF NOT EXISTS idx_addresses_user ON public.addresses(user_id);
+
+
+-- ========================
+-- RPC FUNCTIONS
+-- ========================
+
+-- Increment group order quantity atomically
+CREATE OR REPLACE FUNCTION public.increment_group_quantity(p_group_id UUID, p_qty INTEGER)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE public.group_orders
+  SET current_quantity = current_quantity + p_qty,
+      status = CASE
+        WHEN current_quantity + p_qty >= target_quantity THEN 'reached'
+        ELSE status
+      END
+  WHERE id = p_group_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Increment teaser interest count
+CREATE OR REPLACE FUNCTION public.increment_teaser_interest(p_teaser_id UUID)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE public.teaser_posts
+  SET interested_count = interested_count + 1
+  WHERE id = p_teaser_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Decrement teaser interest count
+CREATE OR REPLACE FUNCTION public.decrement_teaser_interest(p_teaser_id UUID)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE public.teaser_posts
+  SET interested_count = GREATEST(0, interested_count - 1)
+  WHERE id = p_teaser_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 
 -- ========================
 -- ENABLE REALTIME ON KEY TABLES
+-- (These will error if already added — that's OK, ignore errors)
 -- ========================
-ALTER PUBLICATION supabase_realtime ADD TABLE public.prep_requests;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.comments;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.comment_likes;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.flash_sales;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.group_orders;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.group_order_participants;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.waitlist;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.disputes;
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.prep_requests;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.comments;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.comment_likes;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.flash_sales;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.group_orders;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.group_order_participants;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.waitlist;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.disputes;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;

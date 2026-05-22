@@ -32,23 +32,31 @@ export default function AddressesScreen() {
     setIsLoading(false);
   };
 
-  const handleDetectLocation = () => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      infoAlert('Error', 'Geolocation not available');
-      return;
-    }
+  const handleDetectLocation = async () => {
     setIsDetecting(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`);
-          const data = await res.json();
-          setFullAddress(data.display_name || `${pos.coords.latitude}, ${pos.coords.longitude}`);
-        } catch { setFullAddress(`${pos.coords.latitude}, ${pos.coords.longitude}`); }
+    try {
+      // Try expo-location first (native)
+      const Location = require('expo-location');
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        infoAlert('Error', 'Location permission denied');
         setIsDetecting(false);
-      },
-      () => { infoAlert('Error', 'Could not get location'); setIsDetecting(false); }
-    );
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({});
+      setFullAddress(`${loc.coords.latitude.toFixed(6)}, ${loc.coords.longitude.toFixed(6)}`);
+    } catch {
+      // Fallback for web
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => setFullAddress(`${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`),
+          () => infoAlert('Error', 'Could not get location')
+        );
+      } else {
+        infoAlert('Error', 'Location not available on this device');
+      }
+    }
+    setIsDetecting(false);
   };
 
   const handleSave = async () => {

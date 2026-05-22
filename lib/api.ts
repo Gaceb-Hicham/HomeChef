@@ -972,10 +972,11 @@ export const teasersApi = {
 
     if (existing) {
       await supabase.from('teaser_interests').delete().eq('id', existing.id);
-      await supabase.from('teaser_posts').update({ interested_count: supabase.rpc ? undefined : 0 }).eq('id', teaserId);
+      await supabase.rpc('decrement_teaser_interest', { p_teaser_id: teaserId });
       return { interested: false };
     } else {
       await supabase.from('teaser_interests').insert({ teaser_id: teaserId, customer_id: customerId });
+      await supabase.rpc('increment_teaser_interest', { p_teaser_id: teaserId });
       return { interested: true };
     }
   },
