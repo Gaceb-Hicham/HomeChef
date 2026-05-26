@@ -47,6 +47,7 @@ export default function ChefGroupOrdersScreen() {
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     const { error } = await groupOrdersApi.create({
       initiator_id: profile.id,
+      chef_id: profile.id,
       title,
       menu_item_id: selectedItemId || null,
       target_quantity: parseInt(targetQty) || 10,
@@ -107,14 +108,32 @@ export default function ChefGroupOrdersScreen() {
               </>
             )}
 
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <Input label="Target Qty" value={targetQty} onChangeText={setTargetQty} keyboardType="numeric" icon="cube-outline" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Input label="Deadline (hours)" value={deadline} onChangeText={setDeadline} keyboardType="numeric" icon="time-outline" />
-              </View>
+            {/* Target Quantity */}
+            <Text style={{ color: colors.onSurfaceVariant, fontWeight: '600', marginBottom: 8 }}>Target Quantity</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+              <TouchableOpacity onPress={() => setTargetQty(String(Math.max(2, parseInt(targetQty) - 1)))}>
+                <Ionicons name="remove-circle" size={32} color={colors.primary} />
+              </TouchableOpacity>
+              <Text style={{ color: colors.onSurface, fontWeight: '800', fontSize: 24 }}>{targetQty}</Text>
+              <TouchableOpacity onPress={() => setTargetQty(String(parseInt(targetQty) + 1))}>
+                <Ionicons name="add-circle" size={32} color={colors.primary} />
+              </TouchableOpacity>
+              <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>portions needed</Text>
             </View>
+
+            {/* Deadline */}
+            <Text style={{ color: colors.onSurfaceVariant, fontWeight: '600', marginBottom: 8 }}>Deadline</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+              {['6', '12', '24', '48', '72'].map(h => (
+                <TouchableOpacity key={h} onPress={() => setDeadline(h)}
+                  style={[styles.itemChip, { backgroundColor: deadline === h ? colors.primary : colors.surfaceContainerLow }]}>
+                  <Ionicons name="time-outline" size={13} color={deadline === h ? '#fff' : colors.onSurface} />
+                  <Text style={{ color: deadline === h ? '#fff' : colors.onSurface, fontWeight: '600', fontSize: 13, marginLeft: 4 }}>
+                    {parseInt(h) < 24 ? `${h}h` : `${parseInt(h) / 24}d`}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
             <Button title="Create Group Order" onPress={handleCreate} loading={isLoading} style={{ marginTop: 16 }} />
           </View>
         )}

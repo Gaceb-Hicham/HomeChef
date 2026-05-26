@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 
 interface PostImageProps {
@@ -9,18 +9,12 @@ interface PostImageProps {
   borderRadius?: number;
   fallbackSize?: number;
   style?: any;
+  showCarousel?: boolean;
 }
 
 /**
- * Web-specific implementation of PostImage.
- *
- * Uses native HTML <img> instead of React Native's <Image> component because:
- * - Expo Router uses SSR where RN <Image> doesn't hydrate reliably
- * - HTML <img> fires load/error events consistently across all browsers
- * - objectFit: 'cover' gives reliable image scaling without RN style quirks
- *
- * Metro resolves this file for web builds via the .web.tsx extension.
- * The native counterpart (PostImage.tsx) uses React Native's <Image>.
+ * Web-specific implementation of PostImage with multi-image carousel.
+ * Uses native HTML <img> for SSR reliability.
  */
 export function PostImage({
   photos,
@@ -29,23 +23,24 @@ export function PostImage({
   borderRadius = 0,
   fallbackSize = 56,
   style,
+  showCarousel = true,
 }: PostImageProps) {
   const { colors } = useTheme();
 
-  // Filter out empty/whitespace-only URLs
-  const rawUrl = uri || (photos && photos.length > 0 ? photos[0] : null);
-  const imageUrl = rawUrl && rawUrl.trim().length > 0 ? rawUrl.trim() : null;
-
-  const [loaded, setLoaded] = useState(false);
-  const [errored, setErrored] = useState(false);
-
-  // Reset state when URL changes (e.g. data arrives after mount)
-  const prevUrl = useRef(imageUrl);
-  if (imageUrl !== prevUrl.current) {
-    prevUrl.current = imageUrl;
-    setLoaded(false);
-    setErrored(false);
+  // Build list of valid image URLs
+  const allPhotos: string[] = [];
+  if (uri && uri.trim().length > 0) {
+    allPhotos.push(uri.trim());
+  } else if (photos && photos.length > 0) {
+    photos.forEach(p => {
+      if (p && p.trim().length > 0) allPhotos.push(p.trim());
+    });
   }
+
+  const hasMultiple = showCarousel && allPhotos.length > 1;
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [loadStates, setLoadStates] = useState<Record<number, boolean>>({});
+  const [errorStates, setErrorStates] = useState<Record<number, boolean>>({});
 
   const containerStyle = [
     styles.container,
@@ -53,8 +48,7 @@ export function PostImage({
     style,
   ];
 
-  // No image or failed → emoji fallback
-  if (!imageUrl || errored) {
+  if (allPhotos.length === 0) {
     return (
       <View style={containerStyle}>
         <Text style={{ fontSize: fallbackSize }}>🍽️</Text>
@@ -62,25 +56,77 @@ export function PostImage({
     );
   }
 
+  const currentUrl = allPhotos[activeIndex] || allPhotos[0];
+
   return (
     <View style={containerStyle}>
-      <img
-        src={imageUrl}
-        alt=""
-        onLoad={() => setLoaded(true)}
-        onError={() => setErrored(true)}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          borderRadius,
-          display: 'block',
-        }}
-      />
-      {!loaded && !errored && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="small" color={colors.primary} />
-        </View>
+      {/* Current image */}
+      {errorStates[activeIndex] ? (
+        <Text style={{ fontSize: fallbackSize }}>🍽️</Text>
+      ) : (
+        <>
+          <img
+            key={activeIndex}
+            src={currentUrl}
+            alt=""
+            onLoad={() => setLoadStates(s => ({ ...s, [activeIndex]: true }))}
+            onError={() => setErrorStates(s => ({ ...s, [activeIndex]: true }))}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              borderRadius,
+              display: 'block',
+            }}
+          />
+          {!loadStates[activeIndex] && !errorStates[activeIndex] && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+          )}
+        </>
+      )}
+
+      {/* Navigation arrows for multiple images */}
+      {hasMultiple && (
+        <>
+          {activeIndex > 0 && (
+            <TouchableOpacity
+              onPress={() => setActiveIndex(i => Math.max(0, i - 1))}
+              style={[styles.navBtn, { left: 8 }]}
+            >
+              <Text style={styles.navBtnText}>‹</Text>
+            </TouchableOpacity>
+          )}
+          {activeIndex < allPhotos.length - 1 && (
+            <TouchableOpacity
+              onPress={() => setActiveIndex(i => Math.min(allPhotos.length - 1, i + 1))}
+              style={[styles.navBtn, { right: 8 }]}
+            >
+              <Text style={styles.navBtnText}>›</Text>
+            </TouchableOpacity>
+          )}
+          {/* Dots */}
+          <View style={styles.dotsRow}>
+            {allPhotos.map((_, i) => (
+              <TouchableOpacity key={i} onPress={() => setActiveIndex(i)}>
+                <View
+                  style={[
+                    styles.dot,
+                    {
+                      backgroundColor: i === activeIndex ? '#fff' : 'rgba(255,255,255,0.45)',
+                      width: i === activeIndex ? 18 : 7,
+                    },
+                  ]}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+          {/* Counter */}
+          <View style={styles.counterBadge}>
+            <Text style={styles.counterText}>{activeIndex + 1}/{allPhotos.length}</Text>
+          </View>
+        </>
       )}
     </View>
   );
@@ -88,7 +134,6 @@ export function PostImage({
 
 /**
  * Web-specific avatar image component.
- * Uses native HTML <img> for the same SSR reliability reasons as PostImage.
  */
 export function AvatarImage({
   uri,
@@ -158,5 +203,51 @@ const styles = StyleSheet.create({
   avatar: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  navBtn: {
+    position: 'absolute',
+    top: '50%',
+    // @ts-ignore
+    transform: [{ translateY: -16 }],
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navBtnText: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '700',
+    marginTop: -2,
+  },
+  dotsRow: {
+    position: 'absolute',
+    bottom: 10,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 5,
+  },
+  dot: {
+    height: 7,
+    borderRadius: 4,
+  },
+  counterBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  counterText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

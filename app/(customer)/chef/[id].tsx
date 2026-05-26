@@ -247,8 +247,12 @@ export default function ChefProfileScreen() {
                         minQty: String(item.min_order_qty), minNotice: String(item.min_notice_hours),
                       },
                     })}
-                    style={[styles.prepCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
-                    <View style={{ flex: 1 }}>
+                    style={[styles.prepCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm, overflow: 'hidden' }]}>
+                    {/* Show photo if available */}
+                    {item.photos && item.photos.length > 0 && item.photos[0] ? (
+                      <PostImage photos={item.photos} height={140} borderRadius={0} showCarousel={false} />
+                    ) : null}
+                    <View style={{ flex: 1, padding: item.photos?.length > 0 ? 14 : 16 }}>
                       <Text style={{ color: colors.onSurface, fontWeight: '700', fontSize: 16 }}>{item.title}</Text>
                       {item.description && (
                         <Text numberOfLines={2} style={{ color: colors.onSurfaceVariant, fontSize: 13, marginTop: 4 }}>{item.description}</Text>
@@ -261,6 +265,11 @@ export default function ChefProfileScreen() {
                           <Ionicons name="time-outline" size={11} color="#64748b" />
                           <Text style={{ color: '#64748b', fontSize: 11, marginLeft: 3 }}>{item.min_notice_hours}h notice</Text>
                         </View>
+                        {item.min_order_qty > 1 && (
+                          <View style={[styles.prepChip, { backgroundColor: '#ede9fe' }]}>
+                            <Text style={{ color: '#7c3aed', fontSize: 11, fontWeight: '600' }}>Min {item.min_order_qty}</Text>
+                          </View>
+                        )}
                         {item.price_negotiable && (
                           <View style={[styles.prepChip, { backgroundColor: '#fef3c7' }]}>
                             <Text style={{ color: '#b45309', fontSize: 11, fontWeight: '600' }}>Negotiable</Text>
@@ -268,7 +277,6 @@ export default function ChefProfileScreen() {
                         )}
                       </View>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color={colors.outline} />
                   </TouchableOpacity>
                 ))
               ) : (
@@ -304,21 +312,23 @@ export default function ChefProfileScreen() {
                         })}
                         style={[styles.specialtyCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm, overflow: 'hidden' }]}>
                         {item.photos && item.photos.length > 0 ? (
-                          <PostImage photos={item.photos} height={90} borderRadius={0} fallbackSize={24} />
+                          <PostImage photos={item.photos} height={90} borderRadius={0} fallbackSize={24} showCarousel={false} />
                         ) : (
-                          <View style={[styles.specialtyIcon, { backgroundColor: colors.surfaceContainerLow }]}>
+                          <View style={[styles.specialtyIcon, { backgroundColor: colors.surfaceContainerLow, margin: 14 }]}>
                             <Ionicons name="star" size={24} color={colors.primary} />
                           </View>
                         )}
-                        <Text numberOfLines={2} style={{ color: colors.onSurface, fontWeight: '700', fontSize: 14, marginTop: 8 }}>{item.title}</Text>
-                        <Text style={{ color: colors.primary, fontWeight: '700', marginTop: 4 }}>{item.price_range_min}–{item.price_range_max} DA</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
-                          <Ionicons name={availIcon as any} size={12} color={availColor} />
-                          <Text style={{ color: availColor, fontSize: 11, fontWeight: '600' }}>{item.availability}</Text>
-                        </View>
-                        <View style={[styles.prepChip, { backgroundColor: '#f1f5f9', marginTop: 6, alignSelf: 'flex-start' }]}>
-                          <Ionicons name="time-outline" size={11} color="#64748b" />
-                          <Text style={{ color: '#64748b', fontSize: 11, marginLeft: 3 }}>~{item.prep_time_hours}h</Text>
+                        <View style={{ paddingHorizontal: 10, paddingTop: 6, paddingBottom: 10 }}>
+                          <Text numberOfLines={2} style={{ color: colors.onSurface, fontWeight: '700', fontSize: 14 }}>{item.title}</Text>
+                          <Text style={{ color: colors.primary, fontWeight: '700', marginTop: 4 }}>{item.price_range_min}–{item.price_range_max} DA</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                            <Ionicons name={availIcon as any} size={12} color={availColor} />
+                            <Text style={{ color: availColor, fontSize: 11, fontWeight: '600' }}>{item.availability}</Text>
+                          </View>
+                          <View style={[styles.prepChip, { backgroundColor: '#f1f5f9', marginTop: 6, alignSelf: 'flex-start' }]}>
+                            <Ionicons name="time-outline" size={11} color="#64748b" />
+                            <Text style={{ color: '#64748b', fontSize: 11, marginLeft: 3 }}>~{item.prep_time_hours}h</Text>
+                          </View>
                         </View>
                       </TouchableOpacity>
                     );
@@ -405,9 +415,9 @@ const styles = StyleSheet.create({
   gridPrice: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 14, fontWeight: '700', paddingHorizontal: 10, marginTop: 2 },
   gridDate: { fontFamily: 'PlusJakartaSans-Regular', fontSize: 11, paddingHorizontal: 10, paddingBottom: 10, marginTop: 2 },
   emptyTab: { alignItems: 'center', paddingVertical: 40 },
-  prepCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginBottom: 12 },
+  prepCard: { borderRadius: 16, marginBottom: 12 },
   prepChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  specialtyCard: { width: '47%', padding: 14, borderRadius: 16, minHeight: 180 },
+  specialtyCard: { width: '47%', borderRadius: 16, minHeight: 180 },
   specialtyIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   teaserCard: { padding: 18, borderRadius: 16, marginBottom: 14 },
   teaserBadge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', backgroundColor: '#8b5cf6', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
