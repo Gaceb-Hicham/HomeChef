@@ -14,6 +14,8 @@ interface PostImageProps {
   style?: any;
   /** Show all photos in a swipeable carousel (default: true when multiple photos) */
   showCarousel?: boolean;
+  /** 'cover' crops to fill (default), 'contain' shows the full image */
+  fit?: 'cover' | 'contain';
 }
 
 /**
@@ -29,6 +31,7 @@ export function PostImage({
   fallbackSize = 56,
   style,
   showCarousel = true,
+  fit = 'cover',
 }: PostImageProps) {
   const { colors } = useTheme();
 
@@ -76,7 +79,7 @@ export function PostImage({
   if (!hasMultiple) {
     return (
       <View style={containerStyle} onLayout={onLayout}>
-        <SingleImage uri={allPhotos[0]} borderRadius={borderRadius} colors={colors} />
+        <SingleImage uri={allPhotos[0]} borderRadius={borderRadius} colors={colors} fit={fit} />
       </View>
     );
   }
@@ -95,7 +98,7 @@ export function PostImage({
         >
           {allPhotos.map((url, i) => (
             <View key={`${i}-${url}`} style={{ width: containerWidth, height }}>
-              <SingleImage uri={url} borderRadius={0} colors={colors} />
+              <SingleImage uri={url} borderRadius={0} colors={colors} fit={fit} />
             </View>
           ))}
         </ScrollView>
@@ -124,7 +127,7 @@ export function PostImage({
 }
 
 /** Single image with load/error handling */
-function SingleImage({ uri, borderRadius, colors }: { uri: string; borderRadius: number; colors: any }) {
+function SingleImage({ uri, borderRadius, colors, fit = 'cover' }: { uri: string; borderRadius: number; colors: any; fit?: 'cover' | 'contain' }) {
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
 
@@ -141,7 +144,7 @@ function SingleImage({ uri, borderRadius, colors }: { uri: string; borderRadius:
       <Image
         source={{ uri }}
         style={[styles.image, { borderRadius }]}
-        resizeMode="cover"
+        resizeMode={fit}
         onLoadEnd={() => setLoaded(true)}
         onError={() => setErrored(true)}
       />

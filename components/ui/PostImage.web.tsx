@@ -10,6 +10,8 @@ interface PostImageProps {
   fallbackSize?: number;
   style?: any;
   showCarousel?: boolean;
+  /** 'cover' crops to fill (default), 'contain' shows the full image */
+  fit?: 'cover' | 'contain';
 }
 
 /**
@@ -24,6 +26,7 @@ export function PostImage({
   fallbackSize = 56,
   style,
   showCarousel = true,
+  fit = 'cover',
 }: PostImageProps) {
   const { colors } = useTheme();
 
@@ -74,7 +77,7 @@ export function PostImage({
             style={{
               width: '100%',
               height: '100%',
-              objectFit: 'cover',
+              objectFit: fit,
               borderRadius,
               display: 'block',
             }}
