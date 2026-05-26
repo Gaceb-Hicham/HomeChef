@@ -10,6 +10,7 @@ import { ScreenWrapper, Button, PostImage, AvatarImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
 import { useToast } from '@/components/ui/Toast';
+import { flashSalesApi } from '@/lib/api';
 
 
 
@@ -23,10 +24,18 @@ export default function OfferDetailScreen() {
   const { isSaved, toggleSave } = useSavedStore();
   const { showToast } = useToast();
   const [qty, setQty] = useState(1);
+  const [flashSale, setFlashSale] = useState<any>(null);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    if (id) fetchPostById(id);
+    if (id) {
+      fetchPostById(id);
+      // Check for active flash sale on this post
+      flashSalesApi.getActive().then(({ data }) => {
+        const sale = (data || []).find((s: any) => s.post_id === id);
+        if (sale) setFlashSale(sale);
+      }).catch(() => {});
+    }
   }, [id]);
 
   // Must be called unconditionally (before any early return) to obey Rules of Hooks
@@ -47,6 +56,11 @@ export default function OfferDetailScreen() {
   const reviews = (post as any)?.reviews || [];
   const maxQty = post?.remaining_quantity || 1;
 
+  // Flash sale pricing
+  const discountedPrice = flashSale ? Math.round(post?.price * (1 - flashSale.discount_percentage / 100)) : null;
+  const effectivePrice = discountedPrice || post?.price || 0;
+  const saleEndsIn = flashSale ? Math.max(0, Math.floor((new Date(flashSale.ends_at).getTime() - Date.now()) / 3600000)) : 0;
+
   if (!post) {
     return (
       <ScreenWrapper>
@@ -62,14 +76,14 @@ export default function OfferDetailScreen() {
   }
 
   const handleAddToCart = () => {
-    // Add the item and then set quantity directly
+    // Add the item with effective price (discounted if flash sale active)
     addItem({
       postId: id || post.id,
       chefId: chef.id,
       chefName: chef.full_name,
       title: post.title,
       photo: (post.photos && post.photos.length > 0) ? post.photos[0] : '',
-      price: post.price,
+      price: effectivePrice,
       maxQuantity: maxQty,
     });
     // If qty > 1, update to match selected quantity
@@ -108,9 +122,33 @@ export default function OfferDetailScreen() {
         </View>
 
         <View style={{ padding: 20 }}>
+          {/* Flash Sale Banner */}
+          {flashSale && (
+            <View style={styles.flashBanner}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="flash" size={18} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>FLASH SALE — {flashSale.discount_percentage}% OFF</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                <Ionicons name="time" size={13} color="#fef3c7" />
+                <Text style={{ color: '#fef3c7', fontSize: 12, fontWeight: '600' }}>Ends in {saleEndsIn}h</Text>
+              </View>
+            </View>
+          )}
+
           {/* Title & price */}
           <Text style={[styles.title, { color: colors.onBackground }]}>{post.title}</Text>
-          <Text style={[styles.price, { color: colors.primary }]}>{post.price} <Text style={styles.currency}>DA</Text></Text>
+          {discountedPrice ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <Text style={[styles.price, { color: colors.primary }]}>{discountedPrice} <Text style={styles.currency}>DA</Text></Text>
+              <Text style={{ fontSize: 18, color: '#9ca3af', textDecorationLine: 'line-through' }}>{post.price} DA</Text>
+              <View style={{ backgroundColor: '#dc2626', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>-{flashSale.discount_percentage}%</Text>
+              </View>
+            </View>
+          ) : (
+            <Text style={[styles.price, { color: colors.primary }]}>{post.price} <Text style={styles.currency}>DA</Text></Text>
+          )}
 
           {/* Chef info */}
           <TouchableOpacity onPress={() => router.push(`/(customer)/chef/${chef.id}`)}
@@ -191,7 +229,7 @@ export default function OfferDetailScreen() {
             <TouchableOpacity onPress={handleAddToCart} style={[styles.addBtn, { backgroundColor: colors.primary }]}>
               <Ionicons name="cart" size={20} color={colors.onPrimary} />
               <Text style={{ color: colors.onPrimary, fontWeight: '700', fontSize: 15, marginLeft: 8 }}>
-                Add — {post.price * qty} DA
+                Add — {effectivePrice * qty} DA
               </Text>
             </TouchableOpacity>
           </View>
@@ -225,4 +263,5 @@ const styles = StyleSheet.create({
   qtyBtn: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   qtyText: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 18, fontWeight: '700', minWidth: 24, textAlign: 'center' },
   addBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 14 },
+  flashBanner: { backgroundColor: '#dc2626', padding: 14, borderRadius: 14, marginBottom: 16 },
 });

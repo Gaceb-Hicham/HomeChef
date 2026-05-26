@@ -13,6 +13,7 @@ import { useRealtimeFeed } from '@/hooks/useRealtime';
 import { ScreenWrapper, PostImage, AvatarImage, FeedSkeleton } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '@/hooks/useLanguage';
+import { flashSalesApi, teasersApi, groupOrdersApi } from '@/lib/api';
 
 const { width } = Dimensions.get('window');
 
@@ -30,6 +31,11 @@ export default function HomeScreen() {
 
   const [activeCategory, setActiveCategory] = useState('All');
 
+  // New feature states
+  const [flashSales, setFlashSales] = useState<any[]>([]);
+  const [teasers, setTeasers] = useState<any[]>([]);
+  const [groupOrders, setGroupOrders] = useState<any[]>([]);
+
   // Subscribe to realtime feed updates
   useRealtimeFeed(handleRealtimeUpdate);
 
@@ -37,6 +43,24 @@ export default function HomeScreen() {
   useEffect(() => {
     fetchFeed(profile?.city || undefined);
   }, [profile?.city]);
+
+  // Fetch new features data
+  useEffect(() => {
+    loadExtras();
+  }, []);
+
+  const loadExtras = async () => {
+    try {
+      const [salesRes, teaserRes, groupRes] = await Promise.all([
+        flashSalesApi.getActive(),
+        teasersApi.getActive(),
+        groupOrdersApi.getOpen(),
+      ]);
+      setFlashSales(salesRes.data || []);
+      setTeasers(teaserRes.data || []);
+      setGroupOrders(groupRes.data || []);
+    } catch (e) {}
+  };
 
   // Fetch unread notification count
   useEffect(() => {
@@ -61,6 +85,7 @@ export default function HomeScreen() {
 
   const onRefresh = useCallback(() => {
     refreshFeed(profile?.city || undefined);
+    loadExtras();
   }, [profile?.city]);
 
   // Use real data only
@@ -109,6 +134,10 @@ export default function HomeScreen() {
       ? new Date(item.order_deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : item.order_deadline;
 
+    // Check if this post has an active flash sale
+    const sale = flashSales.find((s: any) => s.post_id === item.id);
+    const discountedPrice = sale ? Math.round(item.price * (1 - sale.discount_percentage / 100)) : null;
+
     return (
       <TouchableOpacity
         activeOpacity={0.85}
@@ -122,6 +151,12 @@ export default function HomeScreen() {
               {remaining} {t('home.left')}
             </Text>
           </View>
+          {sale && (
+            <View style={styles.saleBadge}>
+              <Ionicons name="flash" size={12} color="#fff" />
+              <Text style={styles.saleBadgeText}>-{sale.discount_percentage}%</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.postContent}>
@@ -136,9 +171,20 @@ export default function HomeScreen() {
           <Text style={[styles.postTitle, { color: colors.onSurface }]}>{item.title}</Text>
 
           <View style={styles.postFooter}>
-            <Text style={[styles.price, { color: colors.primary }]}>
-              {item.price} <Text style={styles.currency}>DA</Text>
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {discountedPrice ? (
+                <>
+                  <Text style={[styles.price, { color: colors.primary }]}>
+                    {discountedPrice} <Text style={styles.currency}>DA</Text>
+                  </Text>
+                  <Text style={styles.originalPrice}>{item.price} DA</Text>
+                </>
+              ) : (
+                <Text style={[styles.price, { color: colors.primary }]}>
+                  {item.price} <Text style={styles.currency}>DA</Text>
+                </Text>
+              )}
+            </View>
             <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.primary }]}
               onPress={() => router.push(`/(customer)/offer/${item.id}`)}>
               <Ionicons name="add" size={20} color={colors.onPrimary} />
@@ -202,6 +248,140 @@ export default function HomeScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+
+        {/* ===== FLASH SALES SECTION ===== */}
+        {flashSales.length > 0 && (
+          <>
+            <View style={[styles.sectionHeader, { paddingHorizontal: spacing.xl }]}>
+              <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>⚡ Flash Sales</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: 12, marginBottom: 20 }}>
+              {flashSales.map((sale: any) => {
+                const post = sale.post;
+                if (!post) return null;
+                const discounted = Math.round(post.price * (1 - sale.discount_percentage / 100));
+                const endsIn = Math.max(0, Math.floor((new Date(sale.ends_at).getTime() - Date.now()) / 3600000));
+                return (
+                  <TouchableOpacity key={sale.id}
+                    onPress={() => router.push(`/(customer)/offer/${post.id}`)}
+                    style={[styles.flashCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.md }]}>
+                    <PostImage photos={post.photos} height={110} borderRadius={0} fallbackSize={28} />
+                    <View style={styles.flashBadge}>
+                      <Ionicons name="flash" size={10} color="#fff" />
+                      <Text style={styles.flashBadgeText}>-{sale.discount_percentage}%</Text>
+                    </View>
+                    <View style={{ padding: 10 }}>
+                      <Text numberOfLines={1} style={{ color: colors.onSurface, fontWeight: '700', fontSize: 13 }}>
+                        {post.title}
+                      </Text>
+                      <Text style={{ color: colors.onSurfaceVariant, fontSize: 11, marginTop: 2 }}>
+                        {sale.post?.chef?.full_name || 'Chef'}
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                        <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 15 }}>{discounted} DA</Text>
+                        <Text style={styles.originalPrice}>{post.price} DA</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                        <Ionicons name="time" size={11} color={endsIn < 2 ? '#dc2626' : colors.outline} />
+                        <Text style={{ color: endsIn < 2 ? '#dc2626' : colors.outline, fontSize: 11, fontWeight: '600' }}>
+                          {endsIn}h left
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </>
+        )}
+
+        {/* ===== TEASERS SECTION (Coming Soon) ===== */}
+        {teasers.length > 0 && (
+          <>
+            <View style={[styles.sectionHeader, { paddingHorizontal: spacing.xl }]}>
+              <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>🎬 Coming Soon</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: 12, marginBottom: 20 }}>
+              {teasers.map((teaser: any) => (
+                <View key={teaser.id}
+                  style={[styles.teaserCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
+                  <View style={styles.teaserBadge}>
+                    <Ionicons name="time" size={10} color="#fff" />
+                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800', marginLeft: 3 }}>COMING SOON</Text>
+                  </View>
+                  <Text style={{ color: colors.onSurface, fontWeight: '700', fontSize: 15, marginTop: 8 }}>{teaser.title}</Text>
+                  {teaser.description && (
+                    <Text numberOfLines={2} style={{ color: colors.onSurfaceVariant, fontSize: 12, marginTop: 4, lineHeight: 17 }}>
+                      {teaser.description}
+                    </Text>
+                  )}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                    <AvatarImage uri={teaser.chef?.profile_photo_url} size={20} emoji="👨‍🍳" />
+                    <Text style={{ color: colors.onSurfaceVariant, fontSize: 11 }}>
+                      {teaser.chef?.full_name || 'Chef'}
+                    </Text>
+                  </View>
+                  {teaser.planned_date && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                      <Ionicons name="calendar" size={12} color={colors.primary} />
+                      <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>{teaser.planned_date}</Text>
+                    </View>
+                  )}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}>
+                    <Ionicons name="heart" size={14} color="#e11d48" />
+                    <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{teaser.interested_count || 0} interested</Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          </>
+        )}
+
+        {/* ===== GROUP ORDERS SECTION ===== */}
+        {groupOrders.length > 0 && (
+          <>
+            <View style={[styles.sectionHeader, { paddingHorizontal: spacing.xl }]}>
+              <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>👥 Group Orders</Text>
+              <TouchableOpacity onPress={() => router.push('/(customer)/group-orders')}>
+                <Text style={[styles.seeAll, { color: colors.primary }]}>See all</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: 12, marginBottom: 20 }}>
+              {groupOrders.slice(0, 5).map((g: any) => {
+                const progress = Math.min(100, (g.current_quantity / g.target_quantity) * 100);
+                const timeLeft = Math.max(0, Math.floor((new Date(g.deadline).getTime() - Date.now()) / 3600000));
+                return (
+                  <TouchableOpacity key={g.id}
+                    onPress={() => router.push('/(customer)/group-orders')}
+                    style={[styles.groupCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
+                    <Text numberOfLines={1} style={{ color: colors.onSurface, fontWeight: '700', fontSize: 14 }}>{g.title}</Text>
+                    <Text style={{ color: colors.onSurfaceVariant, fontSize: 11, marginTop: 3 }}>
+                      by {g.initiator?.full_name || 'Someone'}
+                    </Text>
+                    <View style={{ marginTop: 10 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <Text style={{ color: colors.onSurfaceVariant, fontSize: 11 }}>{g.current_quantity}/{g.target_quantity}</Text>
+                        <Text style={{ color: progress >= 100 ? '#16a34a' : colors.primary, fontSize: 11, fontWeight: '700' }}>
+                          {Math.round(progress)}%
+                        </Text>
+                      </View>
+                      <View style={[styles.progressBg, { backgroundColor: colors.surfaceContainerLow }]}>
+                        <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: progress >= 100 ? '#16a34a' : colors.primary }]} />
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}>
+                      <Ionicons name="time" size={11} color={timeLeft < 3 ? '#dc2626' : colors.outline} />
+                      <Text style={{ color: timeLeft < 3 ? '#dc2626' : colors.outline, fontSize: 11, fontWeight: '600' }}>{timeLeft}h left</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </>
+        )}
 
         {/* Order Again */}
         {pastOrders.length > 0 && (
@@ -273,7 +453,6 @@ const styles = StyleSheet.create({
   notifDot: { position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: 4 },
   storyItem: { alignItems: 'center', width: 68 },
   storyRing: { width: 64, height: 64, borderRadius: 32, borderWidth: 2.5, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  storyAvatar: { width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center' },
   storyName: { fontFamily: 'PlusJakartaSans-Regular', fontSize: 11 },
   chip: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20, borderWidth: 1 },
   chipText: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 13, fontWeight: '600' },
@@ -285,14 +464,27 @@ const styles = StyleSheet.create({
   postImage: { height: 180, alignItems: 'center', justifyContent: 'center', borderTopLeftRadius: 20, borderTopRightRadius: 20 },
   remainingBadge: { position: 'absolute', top: 12, right: 12, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   remainingText: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 11, fontWeight: '600' },
+  saleBadge: { position: 'absolute', top: 12, left: 12, flexDirection: 'row', alignItems: 'center', backgroundColor: '#dc2626', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, gap: 3 },
+  saleBadgeText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   postContent: { padding: 16 },
   chefRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  chefMiniAvatar: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
   chefName: { fontFamily: 'PlusJakartaSans-Regular', fontSize: 12 },
   deadline: { fontFamily: 'PlusJakartaSans-Regular', fontSize: 12 },
   postTitle: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 17, fontWeight: '600', marginBottom: 10 },
   postFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   price: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 20, fontWeight: '700' },
   currency: { fontSize: 13, fontWeight: '400' },
+  originalPrice: { fontSize: 13, color: '#9ca3af', textDecorationLine: 'line-through' },
   addButton: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  // Flash sale cards
+  flashCard: { width: 160, borderRadius: 16, overflow: 'hidden' },
+  flashBadge: { position: 'absolute', top: 8, left: 8, flexDirection: 'row', alignItems: 'center', backgroundColor: '#dc2626', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, gap: 2 },
+  flashBadgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  // Teaser cards
+  teaserCard: { width: 200, padding: 14, borderRadius: 16 },
+  teaserBadge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', backgroundColor: '#8b5cf6', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  // Group order cards
+  groupCard: { width: 180, padding: 14, borderRadius: 16 },
+  progressBg: { height: 6, borderRadius: 3 },
+  progressFill: { height: 6, borderRadius: 3 },
 });
