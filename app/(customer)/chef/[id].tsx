@@ -3,8 +3,9 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
-import { chefApi, postsApi, followersApi, prepMenuApi, specialtiesApi, teasersApi } from '@/lib';
-import { ScreenWrapper, AvatarImage, PostImage } from '@/components/ui';
+import { chefApi, postsApi, followersApi, prepMenuApi, specialtiesApi, teasersApi, subscriptionsApi } from '@/lib';
+import { infoAlert } from '@/lib/crossAlert';
+import { ScreenWrapper, AvatarImage, PostImage, Input, Button } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '@/components/ui/Toast';
 
@@ -149,8 +150,8 @@ export default function ChefProfileScreen() {
             ))}
           </View>
 
-          {/* Follow & Chat */}
-          <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
+          {/* Follow, Chat & Subscribe */}
+          <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
             <TouchableOpacity onPress={handleFollowToggle}
               style={[styles.followBtn, { backgroundColor: isFollowing ? colors.surfaceContainerLow : colors.primary, borderColor: isFollowing ? colors.outlineVariant : colors.primary }]}>
               <Ionicons name={isFollowing ? 'checkmark' : 'add'} size={18} color={isFollowing ? colors.onSurface : colors.onPrimary} />
@@ -162,6 +163,11 @@ export default function ChefProfileScreen() {
               style={[styles.followBtn, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}>
               <Ionicons name="chatbubble-outline" size={18} color={colors.onSurface} />
               <Text style={{ color: colors.onSurface, fontWeight: '600', fontSize: 14 }}>Chat</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push({ pathname: '/(customer)/subscriptions', params: { chefId: id, chefName: chefName } })}
+              style={[styles.followBtn, { backgroundColor: '#dcfce7', borderColor: '#16a34a' }]}>
+              <Ionicons name="repeat" size={18} color="#16a34a" />
+              <Text style={{ color: '#16a34a', fontWeight: '600', fontSize: 14 }}>Subscribe</Text>
             </TouchableOpacity>
           </View>
 
@@ -296,10 +302,14 @@ export default function ChefProfileScreen() {
                             prepTime: String(item.prep_time_hours),
                           },
                         })}
-                        style={[styles.specialtyCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
-                        <View style={[styles.specialtyIcon, { backgroundColor: colors.surfaceContainerLow }]}>
-                          <Ionicons name="star" size={24} color={colors.primary} />
-                        </View>
+                        style={[styles.specialtyCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm, overflow: 'hidden' }]}>
+                        {item.photos && item.photos.length > 0 ? (
+                          <PostImage photos={item.photos} height={90} borderRadius={0} fallbackSize={24} />
+                        ) : (
+                          <View style={[styles.specialtyIcon, { backgroundColor: colors.surfaceContainerLow }]}>
+                            <Ionicons name="star" size={24} color={colors.primary} />
+                          </View>
+                        )}
                         <Text numberOfLines={2} style={{ color: colors.onSurface, fontWeight: '700', fontSize: 14, marginTop: 8 }}>{item.title}</Text>
                         <Text style={{ color: colors.primary, fontWeight: '700', marginTop: 4 }}>{item.price_range_min}–{item.price_range_max} DA</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>

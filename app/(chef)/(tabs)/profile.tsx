@@ -162,6 +162,7 @@ export default function ChefProfileScreen() {
     { icon: 'star-outline', label: 'Specialties', route: '/(chef)/specialties' },
     { icon: 'hand-left-outline', label: 'Prep Requests', route: '/(chef)/prep-requests' },
     { icon: 'flash-outline', label: 'Flash Sales', route: '/(chef)/flash-sale' },
+    { icon: 'people-outline', label: 'Group Orders', route: '/(chef)/group-orders' },
     { icon: 'megaphone-outline', label: 'Teaser Post', route: '/(chef)/teaser' },
     { icon: 'chatbubbles-outline', label: 'Reviews', route: '/(chef)/reviews' },
     { icon: 'images-outline', label: 'Kitchen Archive', route: '/(chef)/archive' },

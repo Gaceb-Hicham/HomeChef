@@ -3,9 +3,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
-import { ScreenWrapper, Button, Input } from '@/components/ui';
+import { ScreenWrapper, Button, Input, PostImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { specialtiesApi } from '@/lib/api';
+import { pickImage, uploadPostPhotos } from '@/lib/storage';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
 import { useToast } from '@/components/ui/Toast';
 
@@ -33,6 +34,9 @@ export default function SpecialtiesScreen() {
   const [prepTime, setPrepTime] = useState('24');
   const [availability, setAvailability] = useState('always');
   const [category, setCategory] = useState('Other');
+  const [photoUris, setPhotoUris] = useState<string[]>([]);
+  const [photoAssets, setPhotoAssets] = useState<any[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => { fetchItems(); }, []);
 
@@ -45,22 +49,47 @@ export default function SpecialtiesScreen() {
   const resetForm = () => {
     setTitle(''); setDescription(''); setPriceMin(''); setPriceMax('');
     setPrepTime('24'); setAvailability('always'); setCategory('Other');
+    setPhotoUris([]); setPhotoAssets([]);
     setEditingId(null); setShowForm(false);
+  };
+
+  const handlePickPhoto = async () => {
+    const { assets } = await pickImage({ allowsMultipleSelection: false, aspect: [4, 3], quality: 0.8 });
+    if (assets && assets[0]) {
+      setPhotoAssets(prev => [...prev, assets[0]]);
+      setPhotoUris(prev => [...prev, assets[0].uri]);
+    }
   };
 
   const handleSave = async () => {
     if (!title || !priceMin || !priceMax) { infoAlert('Error', 'Title and price range required'); return; }
-    const payload = {
+    setIsUploading(true);
+
+    // Upload new photos
+    let uploadedUrls: string[] = photoUris.filter(u => u.startsWith('http'));
+    const newAssets = photoAssets.filter(a => !a.uri?.startsWith('http'));
+    if (newAssets.length > 0 && profile?.id) {
+      const photos = newAssets.filter(a => a.base64).map(a => ({ base64: a.base64!, fileName: `specialty_${Date.now()}.jpg` }));
+      if (photos.length > 0) {
+        const { urls } = await uploadPostPhotos(profile.id, photos);
+        uploadedUrls = [...uploadedUrls, ...urls];
+      }
+    }
+
+    const payload: any = {
       chef_id: profile?.id, title, description,
       price_range_min: parseInt(priceMin), price_range_max: parseInt(priceMax),
       prep_time_hours: parseInt(prepTime) || 24, availability, category,
+      photos: uploadedUrls,
     };
 
     if (editingId) {
       const { error } = await specialtiesApi.update(editingId, payload);
+      setIsUploading(false);
       if (error) { infoAlert('Error', error); } else { showToast('Updated!', 'success'); resetForm(); fetchItems(); }
     } else {
       const { error } = await specialtiesApi.create(payload);
+      setIsUploading(false);
       if (error) { infoAlert('Error', error); } else { showToast('Specialty added!', 'success'); resetForm(); fetchItems(); }
     }
   };
@@ -69,7 +98,9 @@ export default function SpecialtiesScreen() {
     setTitle(item.title); setDescription(item.description || '');
     setPriceMin(String(item.price_range_min)); setPriceMax(String(item.price_range_max));
     setPrepTime(String(item.prep_time_hours)); setAvailability(item.availability);
-    setCategory(item.category || 'Other'); setEditingId(item.id); setShowForm(true);
+    setCategory(item.category || 'Other'); setEditingId(item.id);
+    setPhotoUris(item.photos || []); setPhotoAssets([]);
+    setShowForm(true);
   };
 
   const handleDelete = (id: string) => {
@@ -98,6 +129,25 @@ export default function SpecialtiesScreen() {
             <Input label="Name" value={title} onChangeText={setTitle} icon="star-outline" />
             <View style={{ height: 12 }} />
             <Input label="Description" value={description} onChangeText={setDescription} multiline icon="document-text-outline" />
+
+            {/* Photo Upload */}
+            <Text style={{ color: colors.onSurfaceVariant, fontWeight: '600', marginTop: 14, marginBottom: 8 }}>Photos</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+              {photoUris.map((uri, i) => (
+                <View key={i} style={{ width: 80, height: 80, borderRadius: 12, marginRight: 8, overflow: 'hidden' }}>
+                  <PostImage uri={uri} height={80} borderRadius={12} />
+                  <TouchableOpacity onPress={() => { setPhotoUris(prev => prev.filter((_, j) => j !== i)); }}
+                    style={{ position: 'absolute', top: 2, right: 2, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="close" size={14} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <TouchableOpacity onPress={handlePickPhoto}
+                style={{ width: 80, height: 80, borderRadius: 12, borderWidth: 2, borderStyle: 'dashed', borderColor: colors.outlineVariant, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="camera-outline" size={24} color={colors.outline} />
+                <Text style={{ color: colors.outline, fontSize: 10, marginTop: 2 }}>Add</Text>
+              </TouchableOpacity>
+            </ScrollView>
             <View style={{ height: 12 }} />
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <View style={{ flex: 1 }}><Input label="Price Min (DA)" value={priceMin} onChangeText={setPriceMin} keyboardType="numeric" /></View>
@@ -128,7 +178,7 @@ export default function SpecialtiesScreen() {
               </TouchableOpacity>
             ))}
 
-            <Button title={editingId ? 'Update' : 'Add Specialty'} onPress={handleSave} style={{ marginTop: 16 }} />
+            <Button title={isUploading ? 'Saving...' : (editingId ? 'Update' : 'Add Specialty')} onPress={handleSave} loading={isUploading} style={{ marginTop: 16 }} />
           </View>
         )}
 

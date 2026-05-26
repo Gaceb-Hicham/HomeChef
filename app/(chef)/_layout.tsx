@@ -12,6 +12,7 @@ export default function ChefLayout() {
       <Stack.Screen name="prep-requests" options={{ presentation: 'card' }} />
       <Stack.Screen name="specialties" options={{ presentation: 'card' }} />
       <Stack.Screen name="flash-sale" options={{ presentation: 'card' }} />
+      <Stack.Screen name="group-orders" options={{ presentation: 'card' }} />
       <Stack.Screen name="teaser" options={{ presentation: 'card' }} />
       <Stack.Screen name="reviews" options={{ presentation: 'card' }} />
       <Stack.Screen name="settings" options={{ presentation: 'card' }} />

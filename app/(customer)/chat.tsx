@@ -12,16 +12,18 @@ import { Ionicons } from '@expo/vector-icons';
 
 type Message = {
   id: string;
-  order_id: string;
   sender_id: string;
   receiver_id: string;
   content: string;
   created_at: string;
+  order_id?: string;
+  reference_id?: string;
+  reference_type?: string;
 };
 
 export default function ChatScreen() {
   const { orderId, chefId, chefName } = useLocalSearchParams<{
-    orderId: string; chefId: string; chefName: string;
+    orderId?: string; chefId?: string; chefName?: string;
   }>();
   const router = useRouter();
   const { colors, shadows } = useTheme();
@@ -31,36 +33,68 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
+  // Determine chat context: order-based or direct message
+  const isOrderChat = !!orderId;
+  const targetUserId = chefId || '';
+
+  // Generate a stable channel ID for direct messages
+  const channelId = isOrderChat
+    ? orderId!
+    : [profile?.id, targetUserId].sort().join('-');
+
   // Fetch messages
   useEffect(() => {
-    if (!orderId) return;
+    if (!profile?.id) return;
     const load = async () => {
       try {
-        const { data } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('order_id', orderId)
-          .order('created_at', { ascending: true });
+        let query;
+        if (isOrderChat) {
+          // Order-based chat
+          query = supabase
+            .from('messages')
+            .select('*')
+            .eq('order_id', orderId!)
+            .order('created_at', { ascending: true });
+        } else {
+          // Direct message chat — fetch messages between the two users
+          query = supabase
+            .from('messages')
+            .select('*')
+            .or(`and(sender_id.eq.${profile.id},receiver_id.eq.${targetUserId}),and(sender_id.eq.${targetUserId},receiver_id.eq.${profile.id})`)
+            .is('order_id', null)
+            .order('created_at', { ascending: true });
+        }
+        const { data } = await query;
         if (data) setMessages(data);
       } catch (e) {}
     };
     load();
 
     // Subscribe to new messages
+    const filterCol = isOrderChat ? 'order_id' : 'reference_id';
+    const filterVal = isOrderChat ? orderId! : `dm-${channelId}`;
     const channel = supabase
-      .channel(`chat-${orderId}`)
+      .channel(`chat-${channelId}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'messages',
-        filter: `order_id=eq.${orderId}`,
       }, (payload) => {
-        setMessages((prev) => [...prev, payload.new as Message]);
+        const newMsg = payload.new as Message;
+        // Only add if relevant to this chat
+        if (isOrderChat && newMsg.order_id === orderId) {
+          setMessages((prev) => [...prev, newMsg]);
+        } else if (!isOrderChat && (
+          (newMsg.sender_id === profile?.id && newMsg.receiver_id === targetUserId) ||
+          (newMsg.sender_id === targetUserId && newMsg.receiver_id === profile?.id)
+        )) {
+          setMessages((prev) => [...prev, newMsg]);
+        }
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [orderId]);
+  }, [orderId, targetUserId, profile?.id]);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -70,16 +104,22 @@ export default function ChatScreen() {
   }, [messages.length]);
 
   const sendMessage = async () => {
-    if (!input.trim() || !profile?.id || !orderId) return;
+    if (!input.trim() || !profile?.id) return;
     setSending(true);
-    const receiverId = profile.role === 'customer' ? chefId : profile.id;
     try {
-      await supabase.from('messages').insert({
-        order_id: orderId,
+      const msgData: any = {
         sender_id: profile.id,
-        receiver_id: receiverId,
+        receiver_id: targetUserId,
         content: input.trim(),
-      });
+      };
+      if (isOrderChat) {
+        msgData.order_id = orderId;
+      } else {
+        // Direct message — no order_id
+        msgData.reference_type = 'direct_message';
+        msgData.reference_id = `dm-${channelId}`;
+      }
+      await supabase.from('messages').insert(msgData);
       setInput('');
     } catch (e) {}
     setSending(false);
@@ -100,7 +140,7 @@ export default function ChatScreen() {
             {chefName || 'Chat'}
           </Text>
           <Text style={{ color: colors.onSurfaceVariant, fontSize: 11 }}>
-            Order #{orderId?.substring(0, 8)}
+            {isOrderChat ? `Order #${orderId?.substring(0, 8)}` : 'Direct Message'}
           </Text>
         </View>
       </View>
@@ -115,7 +155,7 @@ export default function ChatScreen() {
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 }}>
             <Text style={{ fontSize: 40, marginBottom: 8 }}>💬</Text>
             <Text style={{ color: colors.onSurfaceVariant, fontSize: 14, textAlign: 'center' }}>
-              Start a conversation about your order.{'\n'}Be polite and specific!
+              Start a conversation.{'\n'}Be polite and specific!
             </Text>
           </View>
         }

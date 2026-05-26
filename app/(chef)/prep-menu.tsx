@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { ScreenWrapper, Button, Input } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { prepMenuApi } from '@/lib/api';
+import { pickImage, uploadPostPhotos } from '@/lib/storage';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
 import { useToast } from '@/components/ui/Toast';
 import { PostImage } from '@/components/ui/PostImage';
@@ -28,6 +29,9 @@ export default function PrepMenuScreen() {
   const [negotiable, setNegotiable] = useState(false);
   const [minQty, setMinQty] = useState('1');
   const [minNotice, setMinNotice] = useState('24');
+  const [photoUris, setPhotoUris] = useState<string[]>([]);
+  const [photoAssets, setPhotoAssets] = useState<any[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => { fetchItems(); }, []);
 
@@ -41,23 +45,47 @@ export default function PrepMenuScreen() {
 
   const resetForm = () => {
     setTitle(''); setDescription(''); setBasePrice(''); setNegotiable(false);
-    setMinQty('1'); setMinNotice('24'); setEditingId(null); setShowForm(false);
+    setMinQty('1'); setMinNotice('24'); setPhotoUris([]); setPhotoAssets([]);
+    setEditingId(null); setShowForm(false);
+  };
+
+  const handlePickPhoto = async () => {
+    const { assets } = await pickImage({ allowsMultipleSelection: false, aspect: [4, 3], quality: 0.8 });
+    if (assets && assets[0]) {
+      setPhotoAssets(prev => [...prev, assets[0]]);
+      setPhotoUris(prev => [...prev, assets[0].uri]);
+    }
   };
 
   const handleSave = async () => {
     if (!title || !basePrice) { infoAlert('Error', 'Title and price are required'); return; }
-    const payload = {
+    setIsUploading(true);
+
+    let uploadedUrls: string[] = photoUris.filter(u => u.startsWith('http'));
+    const newAssets = photoAssets.filter(a => !a.uri?.startsWith('http'));
+    if (newAssets.length > 0 && profile?.id) {
+      const photos = newAssets.filter(a => a.base64).map(a => ({ base64: a.base64!, fileName: `prep_${Date.now()}.jpg` }));
+      if (photos.length > 0) {
+        const { urls } = await uploadPostPhotos(profile.id, photos);
+        uploadedUrls = [...uploadedUrls, ...urls];
+      }
+    }
+
+    const payload: any = {
       chef_id: profile?.id,
       title, description, base_price: parseInt(basePrice),
       price_negotiable: negotiable, min_order_qty: parseInt(minQty) || 1,
       min_notice_hours: parseInt(minNotice) || 24,
+      photos: uploadedUrls,
     };
 
     if (editingId) {
       const { error } = await prepMenuApi.update(editingId, payload);
+      setIsUploading(false);
       if (error) { infoAlert('Error', error); } else { showToast('Item updated!', 'success'); resetForm(); fetchItems(); }
     } else {
       const { error } = await prepMenuApi.create(payload);
+      setIsUploading(false);
       if (error) { infoAlert('Error', error); } else { showToast('Item added!', 'success'); resetForm(); fetchItems(); }
     }
   };
@@ -66,6 +94,7 @@ export default function PrepMenuScreen() {
     setTitle(item.title); setDescription(item.description || '');
     setBasePrice(String(item.base_price)); setNegotiable(item.price_negotiable);
     setMinQty(String(item.min_order_qty)); setMinNotice(String(item.min_notice_hours));
+    setPhotoUris(item.photos || []); setPhotoAssets([]);
     setEditingId(item.id); setShowForm(true);
   };
 
@@ -104,6 +133,26 @@ export default function PrepMenuScreen() {
             <Input label="Dish Name" value={title} onChangeText={setTitle} icon="restaurant-outline" />
             <View style={{ height: 12 }} />
             <Input label="Description" value={description} onChangeText={setDescription} multiline numberOfLines={2} icon="document-text-outline" />
+
+            {/* Photo Upload */}
+            <Text style={{ color: colors.onSurfaceVariant, fontWeight: '600', marginTop: 14, marginBottom: 8 }}>Photos</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+              {photoUris.map((uri, i) => (
+                <View key={i} style={{ width: 80, height: 80, borderRadius: 12, marginRight: 8, overflow: 'hidden' }}>
+                  <PostImage uri={uri} height={80} borderRadius={12} />
+                  <TouchableOpacity onPress={() => { setPhotoUris(prev => prev.filter((_, j) => j !== i)); }}
+                    style={{ position: 'absolute', top: 2, right: 2, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="close" size={14} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <TouchableOpacity onPress={handlePickPhoto}
+                style={{ width: 80, height: 80, borderRadius: 12, borderWidth: 2, borderStyle: 'dashed', borderColor: colors.outlineVariant, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="camera-outline" size={24} color={colors.outline} />
+                <Text style={{ color: colors.outline, fontSize: 10, marginTop: 2 }}>Add</Text>
+              </TouchableOpacity>
+            </ScrollView>
+
             <View style={{ height: 12 }} />
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <View style={{ flex: 1 }}><Input label="Base Price (DA)" value={basePrice} onChangeText={setBasePrice} keyboardType="numeric" icon="cash-outline" /></View>
@@ -117,7 +166,7 @@ export default function PrepMenuScreen() {
                 <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{negotiable ? 'ON' : 'OFF'}</Text>
               </View>
             </TouchableOpacity>
-            <Button title={editingId ? 'Update Item' : 'Add Item'} onPress={handleSave} style={{ marginTop: 16 }} />
+            <Button title={isUploading ? 'Saving...' : (editingId ? 'Update Item' : 'Add Item')} onPress={handleSave} loading={isUploading} style={{ marginTop: 16 }} />
           </View>
         )}
 

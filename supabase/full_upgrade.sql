@@ -18,6 +18,13 @@ ALTER TABLE public.chef_profiles ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DE
 -- Orders: add order_type and reference_id for multi-mode support
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS order_type TEXT DEFAULT 'instant';
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS reference_id UUID;
+-- Make post_id nullable so preorders/specialty orders don't require a daily post
+ALTER TABLE public.orders ALTER COLUMN post_id DROP NOT NULL;
+
+-- Messages: make order_id nullable for direct messages, add reference columns
+ALTER TABLE public.messages ALTER COLUMN order_id DROP NOT NULL;
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS reference_id TEXT;
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS reference_type TEXT;
 
 -- Reviews: add multi-category ratings and chef reply
 ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS taste_rating INTEGER;

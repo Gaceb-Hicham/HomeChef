@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
-import { ScreenWrapper, Button } from '@/components/ui';
+import { ScreenWrapper, Button, Input } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { subscriptionsApi } from '@/lib/api';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
@@ -13,10 +13,20 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 
 export default function SubscriptionsScreen() {
   const router = useRouter();
+  const { chefId, chefName } = useLocalSearchParams<{ chefId?: string; chefName?: string }>();
   const { colors, shadows } = useTheme();
   const profile = useAuthStore((s) => s.profile);
   const { showToast } = useToast();
   const [subs, setSubs] = useState<any[]>([]);
+  const [showForm, setShowForm] = useState(!!chefId);
+
+  // Creation form
+  const [formTitle, setFormTitle] = useState('');
+  const [formFreq, setFormFreq] = useState<'weekly' | 'biweekly'>('weekly');
+  const [formDay, setFormDay] = useState('Monday');
+  const [formQty, setFormQty] = useState('1');
+  const [formPrice, setFormPrice] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => { fetchSubs(); }, []);
 
@@ -24,6 +34,48 @@ export default function SubscriptionsScreen() {
     if (!profile?.id) return;
     const { data } = await subscriptionsApi.getByCustomer(profile.id);
     setSubs(data || []);
+  };
+
+  const handleCreate = async () => {
+    if (!profile?.id) return;
+    if (!formTitle.trim()) { infoAlert('Error', 'Item title is required'); return; }
+    if (!formPrice || parseInt(formPrice) <= 0) { infoAlert('Error', 'Price is required'); return; }
+
+    const targetChefId = chefId;
+    if (!targetChefId) { infoAlert('Error', 'No chef selected. Visit a chef profile to subscribe.'); return; }
+
+    setIsCreating(true);
+    // Calculate next order date
+    const today = new Date();
+    const dayIndex = DAYS.indexOf(formDay);
+    const currentDay = (today.getDay() + 6) % 7; // Monday=0
+    let daysUntil = dayIndex - currentDay;
+    if (daysUntil <= 0) daysUntil += 7;
+    const nextDate = new Date(today);
+    nextDate.setDate(nextDate.getDate() + daysUntil);
+
+    const { error } = await subscriptionsApi.create({
+      customer_id: profile.id,
+      chef_id: targetChefId,
+      item_title: formTitle.trim(),
+      frequency: formFreq,
+      preferred_day: formDay.toLowerCase(),
+      quantity: parseInt(formQty) || 1,
+      price: parseInt(formPrice),
+      discount_percentage: formFreq === 'weekly' ? 5 : 3,
+      next_order_date: nextDate.toISOString().split('T')[0],
+    });
+    setIsCreating(false);
+
+    if (error) {
+      infoAlert('Error', error);
+    } else {
+      showToast('Subscribed successfully! 🎉', 'success');
+      setShowForm(false);
+      setFormTitle('');
+      setFormPrice('');
+      fetchSubs();
+    }
   };
 
   const handleToggle = async (id: string, currentActive: boolean) => {
@@ -52,19 +104,78 @@ export default function SubscriptionsScreen() {
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => router.back()}><Ionicons name="arrow-back" size={24} color={colors.onSurface} /></TouchableOpacity>
           <Text style={[styles.title, { color: colors.onBackground }]}>🔁 Subscriptions</Text>
-          <View style={{ width: 24 }} />
+          <TouchableOpacity onPress={() => setShowForm(!showForm)}>
+            <Ionicons name={showForm ? 'close' : 'add-circle'} size={28} color={colors.primary} />
+          </TouchableOpacity>
         </View>
 
         <Text style={{ color: colors.onSurfaceVariant, marginBottom: 20, lineHeight: 20 }}>
           Subscribe to your favorite chefs for weekly or biweekly automatic orders with loyalty discounts!
         </Text>
 
-        {subs.length === 0 ? (
+        {/* Creation Form */}
+        {showForm && (
+          <View style={[styles.formCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
+            <Text style={[styles.formTitle, { color: colors.onBackground }]}>
+              New Subscription {chefName ? `from ${chefName}` : ''}
+            </Text>
+
+            <Input label="Dish/Item Name" value={formTitle} onChangeText={setFormTitle}
+              icon="restaurant-outline" placeholder="e.g. Weekly Couscous" />
+            <View style={{ height: 10 }} />
+            <Input label="Price per Order (DA)" value={formPrice} onChangeText={setFormPrice}
+              icon="cash-outline" keyboardType="numeric" placeholder="e.g. 800" />
+            <View style={{ height: 10 }} />
+
+            {/* Frequency */}
+            <Text style={{ color: colors.onSurfaceVariant, fontWeight: '600', marginBottom: 8, marginTop: 4 }}>Frequency</Text>
+            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
+              {(['weekly', 'biweekly'] as const).map(f => (
+                <TouchableOpacity key={f} onPress={() => setFormFreq(f)}
+                  style={[styles.chip, { backgroundColor: formFreq === f ? colors.primary : colors.surfaceContainerLow }]}>
+                  <Text style={{ color: formFreq === f ? '#fff' : colors.onSurface, fontWeight: '600', fontSize: 13 }}>
+                    {f === 'weekly' ? 'Weekly (5% off)' : 'Biweekly (3% off)'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Preferred Day */}
+            <Text style={{ color: colors.onSurfaceVariant, fontWeight: '600', marginBottom: 8 }}>Preferred Day</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+              {DAYS.map(day => (
+                <TouchableOpacity key={day} onPress={() => setFormDay(day)}
+                  style={[styles.dayChip, { backgroundColor: formDay === day ? colors.primary : colors.surfaceContainerLow }]}>
+                  <Text style={{ color: formDay === day ? '#fff' : colors.onSurface, fontWeight: '600', fontSize: 12 }}>
+                    {day.substring(0, 3)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Quantity */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+              <Text style={{ color: colors.onSurfaceVariant, fontWeight: '600' }}>Quantity</Text>
+              <TouchableOpacity onPress={() => setFormQty(String(Math.max(1, parseInt(formQty) - 1)))}>
+                <Ionicons name="remove-circle" size={30} color={colors.primary} />
+              </TouchableOpacity>
+              <Text style={{ color: colors.onSurface, fontWeight: '800', fontSize: 22 }}>{formQty}</Text>
+              <TouchableOpacity onPress={() => setFormQty(String(parseInt(formQty) + 1))}>
+                <Ionicons name="add-circle" size={30} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <Button title="Subscribe 🔔" onPress={handleCreate} loading={isCreating} size="lg" />
+          </View>
+        )}
+
+        {/* Existing Subs */}
+        {subs.length === 0 && !showForm ? (
           <View style={styles.empty}>
             <Ionicons name="repeat-outline" size={48} color={colors.outline} />
             <Text style={{ color: colors.outline, fontSize: 16, marginTop: 12 }}>No subscriptions yet</Text>
             <Text style={{ color: colors.outline, fontSize: 13, marginTop: 6, textAlign: 'center' }}>
-              Visit a chef's profile and subscribe to their weekly dishes
+              Visit a chef's profile and tap "Subscribe"
             </Text>
           </View>
         ) : (
@@ -143,6 +254,10 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, marginTop: 8 },
   title: { fontFamily: 'NotoSerif-Bold', fontSize: 22, fontWeight: '700' },
   section: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 17, fontWeight: '600', marginBottom: 12 },
+  formCard: { padding: 18, borderRadius: 16, marginBottom: 20 },
+  formTitle: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 17, fontWeight: '600', marginBottom: 14 },
+  chip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
+  dayChip: { width: 44, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
   subCard: { padding: 18, borderRadius: 16, marginBottom: 14, borderLeftWidth: 4 },
   activeBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
   infoChip: { flexDirection: 'row', alignItems: 'center' },
