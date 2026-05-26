@@ -163,6 +163,7 @@ export default function HomeScreen() {
           <View style={styles.chefRow}>
             <AvatarImage uri={item.chef?.profile_photo_url} size={24} emoji="👨‍🍳" />
             <Text style={[styles.chefName, { color: colors.onSurfaceVariant }]}>{chefName}</Text>
+            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: item.chef?.chef_profiles?.is_open !== false ? '#16a34a' : '#dc2626', marginLeft: 4 }} />
             <View style={{ flex: 1 }} />
             <Ionicons name="time-outline" size={14} color={colors.outline} />
             <Text style={[styles.deadline, { color: colors.outline }]}> {deadline}</Text>
@@ -212,6 +213,12 @@ export default function HomeScreen() {
             </Text>
           </View>
           <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={[styles.iconBtn, { backgroundColor: colors.surfaceContainerLow }]}
+              onPress={() => router.push('/(customer)/search')}
+            >
+              <Ionicons name="search-outline" size={22} color={colors.onSurface} />
+            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.iconBtn, { backgroundColor: colors.surfaceContainerLow }]}
               onPress={() => router.push('/(customer)/notifications')}

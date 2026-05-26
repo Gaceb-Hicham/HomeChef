@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useToast } from '@/components/ui/Toast';
+import { compressImage } from '@/lib/imageCompressor';
 
 export default function CreatePostScreen() {
   const router = useRouter();
@@ -62,12 +63,13 @@ export default function CreatePostScreen() {
       input.click();
     } else {
       try {
-        const { assets, canceled } = await pickImage({ allowsMultipleSelection: true, aspect: [4, 3], quality: 0.7 });
+        const { assets, canceled } = await pickImage({ allowsMultipleSelection: true, aspect: [4, 3], quality: 0.8 });
         if (!canceled && assets) {
-          const newPhotos = assets.slice(0, 5 - selectedPhotos.length).map((a: any) => ({
-            uri: a.uri,
-            base64: a.base64 || '',
-          }));
+          const newPhotos: { uri: string; base64: string }[] = [];
+          for (const a of assets.slice(0, 5 - selectedPhotos.length)) {
+            const compressed = await compressImage(a.uri, 1200, 0.7);
+            newPhotos.push({ uri: compressed, base64: a.base64 || '' });
+          }
           setSelectedPhotos([...selectedPhotos, ...newPhotos]);
         }
       } catch (e) {
@@ -256,7 +258,17 @@ export default function CreatePostScreen() {
           </View>
         </View>
 
-        <Input label={`${t('create_post.deadline')} *`} placeholder="14:00" value={deadline} onChangeText={setDeadline} icon="time-outline" />
+        <Text style={{ color: colors.onSurfaceVariant, fontWeight: '600', fontSize: 14, marginBottom: 8 }}>{t('create_post.deadline')} *</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+          {['12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'].map(time => (
+            <TouchableOpacity key={time} onPress={() => setDeadline(time)}
+              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, marginRight: 8,
+                backgroundColor: deadline === time ? colors.primary : colors.surfaceContainerLow }}>
+              <Ionicons name="time-outline" size={14} color={deadline === time ? '#fff' : colors.onSurface} />
+              <Text style={{ color: deadline === time ? '#fff' : colors.onSurface, fontWeight: '600', fontSize: 13, marginLeft: 4 }}>{time}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         {/* Toggles */}
         <View style={[styles.toggleCard, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>

@@ -7,6 +7,7 @@ import { useOrdersStore } from '@/stores/ordersStore';
 import { ScreenWrapper, PostImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '@/hooks/useLanguage';
+import { crossAlert } from '@/lib/crossAlert';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; icon: string }> = {
   received: { bg: '#e0f2fe', text: '#0369a1', icon: 'receipt' },
@@ -23,7 +24,7 @@ export default function OrdersScreen() {
   const router = useRouter();
   const { colors, shadows } = useTheme();
   const profile = useAuthStore((s) => s.profile);
-  const { activeOrders, pastOrders, fetchCustomerOrders, isLoading } = useOrdersStore();
+  const { activeOrders, pastOrders, fetchCustomerOrders, updateOrderStatus, isLoading } = useOrdersStore();
   const [tab, setTab] = useState<'active' | 'past'>('active');
   const { t } = useLanguage();
   const [refreshing, setRefreshing] = useState(false);
@@ -86,7 +87,23 @@ export default function OrdersScreen() {
             <Ionicons name={item.delivery_type === 'delivery' ? 'bicycle' : 'storefront'} size={12} color={colors.onSurfaceVariant} />
             <Text style={{ color: colors.onSurfaceVariant, fontSize: 11, textTransform: 'capitalize' }}>{item.delivery_type}</Text>
           </View>
-          {tab === 'active' && (
+          {tab === 'active' && item.order_status === 'received' && (
+            <TouchableOpacity
+              onPress={() => {
+                crossAlert('Cancel Order', 'Are you sure you want to cancel this order?', [
+                  { text: 'No', style: 'cancel' },
+                  { text: 'Yes, Cancel', style: 'destructive', onPress: async () => {
+                    await updateOrderStatus(item.id, 'cancelled');
+                    if (profile?.id) fetchCustomerOrders(profile.id);
+                  }},
+                ]);
+              }}
+              style={[styles.cancelBtn, { borderColor: '#dc2626' }]}>
+              <Ionicons name="close-circle-outline" size={14} color="#dc2626" />
+              <Text style={{ color: '#dc2626', fontSize: 11, fontWeight: '600', marginLeft: 3 }}>Cancel</Text>
+            </TouchableOpacity>
+          )}
+          {tab === 'active' && item.order_status !== 'received' && (
             <Ionicons name="chevron-forward" size={18} color={colors.outline} style={{ marginLeft: 'auto' }} />
           )}
           {tab === 'past' && !item.review && item.order_status === 'delivered' && (
@@ -152,4 +169,5 @@ const styles = StyleSheet.create({
   statusText: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 11, fontWeight: '600', textTransform: 'capitalize' },
   deliveryBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   reviewBtn: { marginLeft: 'auto', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
+  cancelBtn: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
 });
