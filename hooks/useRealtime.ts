@@ -1,6 +1,11 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+
+let channelCounter = 0;
+function uniqueChannelName(base: string) {
+  return `${base}-${Date.now()}-${++channelCounter}`;
+}
 
 /**
  * Subscribe to real-time changes on daily_posts table.
@@ -8,29 +13,42 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
  */
 export function useRealtimeFeed(onUpdate: (payload: any) => void) {
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const callbackRef = useRef(onUpdate);
+  callbackRef.current = onUpdate;
 
   useEffect(() => {
-    const channel = supabase
-      .channel('feed-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'daily_posts',
-          filter: 'is_active=eq.true',
-        },
-        (payload) => {
-          onUpdate(payload);
-        }
-      )
-      .subscribe();
+    // Clean up any existing channel first
+    if (channelRef.current) {
+      try { supabase.removeChannel(channelRef.current); } catch (_) {}
+      channelRef.current = null;
+    }
 
-    channelRef.current = channel;
+    try {
+      const channel = supabase
+        .channel(uniqueChannelName('feed-updates'))
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'daily_posts',
+            filter: 'is_active=eq.true',
+          },
+          (payload) => {
+            callbackRef.current(payload);
+          }
+        )
+        .subscribe();
+
+      channelRef.current = channel;
+    } catch (e) {
+      console.warn('[useRealtimeFeed] Subscription error:', e);
+    }
 
     return () => {
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
+        try { supabase.removeChannel(channelRef.current); } catch (_) {}
+        channelRef.current = null;
       }
     };
   }, []);
@@ -42,32 +60,44 @@ export function useRealtimeFeed(onUpdate: (payload: any) => void) {
  */
 export function useRealtimeOrder(orderId: string, onStatusChange: (newStatus: string) => void) {
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const callbackRef = useRef(onStatusChange);
+  callbackRef.current = onStatusChange;
 
   useEffect(() => {
     if (!orderId) return;
 
-    const channel = supabase
-      .channel(`order-${orderId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-          filter: `id=eq.${orderId}`,
-        },
-        (payload) => {
-          const newStatus = payload.new?.order_status;
-          if (newStatus) onStatusChange(newStatus);
-        }
-      )
-      .subscribe();
+    if (channelRef.current) {
+      try { supabase.removeChannel(channelRef.current); } catch (_) {}
+      channelRef.current = null;
+    }
 
-    channelRef.current = channel;
+    try {
+      const channel = supabase
+        .channel(uniqueChannelName(`order-${orderId}`))
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'orders',
+            filter: `id=eq.${orderId}`,
+          },
+          (payload) => {
+            const newStatus = payload.new?.order_status;
+            if (newStatus) callbackRef.current(newStatus);
+          }
+        )
+        .subscribe();
+
+      channelRef.current = channel;
+    } catch (e) {
+      console.warn('[useRealtimeOrder] Subscription error:', e);
+    }
 
     return () => {
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
+        try { supabase.removeChannel(channelRef.current); } catch (_) {}
+        channelRef.current = null;
       }
     };
   }, [orderId]);
@@ -79,31 +109,43 @@ export function useRealtimeOrder(orderId: string, onStatusChange: (newStatus: st
  */
 export function useRealtimeChefOrders(chefId: string, onNewOrder: (order: any) => void) {
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const callbackRef = useRef(onNewOrder);
+  callbackRef.current = onNewOrder;
 
   useEffect(() => {
     if (!chefId) return;
 
-    const channel = supabase
-      .channel(`chef-orders-${chefId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'orders',
-          filter: `chef_id=eq.${chefId}`,
-        },
-        (payload) => {
-          onNewOrder(payload.new);
-        }
-      )
-      .subscribe();
+    if (channelRef.current) {
+      try { supabase.removeChannel(channelRef.current); } catch (_) {}
+      channelRef.current = null;
+    }
 
-    channelRef.current = channel;
+    try {
+      const channel = supabase
+        .channel(uniqueChannelName(`chef-orders-${chefId}`))
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'orders',
+            filter: `chef_id=eq.${chefId}`,
+          },
+          (payload) => {
+            callbackRef.current(payload.new);
+          }
+        )
+        .subscribe();
+
+      channelRef.current = channel;
+    } catch (e) {
+      console.warn('[useRealtimeChefOrders] Subscription error:', e);
+    }
 
     return () => {
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
+        try { supabase.removeChannel(channelRef.current); } catch (_) {}
+        channelRef.current = null;
       }
     };
   }, [chefId]);
@@ -114,31 +156,43 @@ export function useRealtimeChefOrders(chefId: string, onNewOrder: (order: any) =
  */
 export function useRealtimeNotifications(userId: string, onNotification: (notif: any) => void) {
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const callbackRef = useRef(onNotification);
+  callbackRef.current = onNotification;
 
   useEffect(() => {
     if (!userId) return;
 
-    const channel = supabase
-      .channel(`notif-${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          onNotification(payload.new);
-        }
-      )
-      .subscribe();
+    if (channelRef.current) {
+      try { supabase.removeChannel(channelRef.current); } catch (_) {}
+      channelRef.current = null;
+    }
 
-    channelRef.current = channel;
+    try {
+      const channel = supabase
+        .channel(uniqueChannelName(`notif-${userId}`))
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            callbackRef.current(payload.new);
+          }
+        )
+        .subscribe();
+
+      channelRef.current = channel;
+    } catch (e) {
+      console.warn('[useRealtimeNotifications] Subscription error:', e);
+    }
 
     return () => {
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
+        try { supabase.removeChannel(channelRef.current); } catch (_) {}
+        channelRef.current = null;
       }
     };
   }, [userId]);
@@ -154,9 +208,14 @@ export function useRealtimeSubscription(
   callback: (payload: any) => void,
 ) {
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
 
   useEffect(() => {
-    const channelName = `${table}-${event}-${filter || 'all'}`;
+    if (channelRef.current) {
+      try { supabase.removeChannel(channelRef.current); } catch (_) {}
+      channelRef.current = null;
+    }
 
     const config: any = {
       event,
@@ -166,16 +225,21 @@ export function useRealtimeSubscription(
 
     if (filter) config.filter = filter;
 
-    const channel = supabase
-      .channel(channelName)
-      .on('postgres_changes', config, callback)
-      .subscribe();
+    try {
+      const channel = supabase
+        .channel(uniqueChannelName(`${table}-${event}-${filter || 'all'}`))
+        .on('postgres_changes', config, (payload) => callbackRef.current(payload))
+        .subscribe();
 
-    channelRef.current = channel;
+      channelRef.current = channel;
+    } catch (e) {
+      console.warn('[useRealtimeSubscription] Subscription error:', e);
+    }
 
     return () => {
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
+        try { supabase.removeChannel(channelRef.current); } catch (_) {}
+        channelRef.current = null;
       }
     };
   }, [table, event, filter]);

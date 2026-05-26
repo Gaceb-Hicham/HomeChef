@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
   seeAll: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 13, fontWeight: '600' },
   postCard: { borderRadius: 20, overflow: 'hidden' },
   reorderCard: { width: 120, padding: 14, borderRadius: 16, alignItems: 'center' },
-  postImage: { height: 180, alignItems: 'center', justifyContent: 'center', borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+  postImage: { height: 180, overflow: 'hidden', borderTopLeftRadius: 20, borderTopRightRadius: 20 },
   remainingBadge: { position: 'absolute', top: 12, right: 12, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   remainingText: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 11, fontWeight: '600' },
   saleBadge: { position: 'absolute', top: 12, left: 12, flexDirection: 'row', alignItems: 'center', backgroundColor: '#dc2626', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, gap: 3 },
