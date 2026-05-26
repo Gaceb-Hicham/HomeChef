@@ -1,11 +1,9 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Image, Text, StyleSheet, ActivityIndicator,
-  ScrollView, Dimensions, NativeSyntheticEvent, NativeScrollEvent, TouchableOpacity,
+  ScrollView, TouchableOpacity, LayoutChangeEvent,
 } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface PostImageProps {
   photos?: string[] | null;
@@ -21,9 +19,7 @@ interface PostImageProps {
 /**
  * Native (iOS/Android) implementation of PostImage.
  * Supports multi-image carousel with swipe and pagination dots.
- *
- * The web counterpart lives in PostImage.web.tsx and uses HTML <img> tags
- * to avoid SSR/hydration mismatches with Expo Router.
+ * Uses onLayout to determine actual container width for proper carousel sizing.
  */
 export function PostImage({
   photos,
@@ -48,13 +44,19 @@ export function PostImage({
 
   const hasMultiple = showCarousel && allPhotos.length > 1;
   const [activeIndex, setActiveIndex] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
 
-  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const x = e.nativeEvent.contentOffset.x;
-    const w = e.nativeEvent.layoutMeasurement.width;
-    const idx = Math.round(x / w);
-    setActiveIndex(idx);
+  const onLayout = useCallback((e: LayoutChangeEvent) => {
+    const w = e.nativeEvent.layout.width;
+    if (w > 0) setContainerWidth(w);
   }, []);
+
+  const onScroll = useCallback((e: any) => {
+    if (!containerWidth) return;
+    const x = e.nativeEvent.contentOffset.x;
+    const idx = Math.round(x / containerWidth);
+    setActiveIndex(idx);
+  }, [containerWidth]);
 
   const containerStyle = [
     styles.container,
@@ -64,15 +66,16 @@ export function PostImage({
 
   if (allPhotos.length === 0) {
     return (
-      <View style={containerStyle}>
+      <View style={containerStyle} onLayout={onLayout}>
         <Text style={{ fontSize: fallbackSize }}>🍽️</Text>
       </View>
     );
   }
 
+  // Single image (no carousel)
   if (!hasMultiple) {
     return (
-      <View style={containerStyle}>
+      <View style={containerStyle} onLayout={onLayout}>
         <SingleImage uri={allPhotos[0]} borderRadius={borderRadius} colors={colors} />
       </View>
     );
@@ -80,21 +83,23 @@ export function PostImage({
 
   // Multi-image carousel
   return (
-    <View style={containerStyle}>
-      <ScrollView
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        style={{ flex: 1 }}
-      >
-        {allPhotos.map((url, i) => (
-          <View key={`${url}-${i}`} style={{ width: SCREEN_WIDTH, height }}>
-            <SingleImage uri={url} borderRadius={0} colors={colors} />
-          </View>
-        ))}
-      </ScrollView>
+    <View style={containerStyle} onLayout={onLayout}>
+      {containerWidth > 0 && (
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          style={{ flex: 1 }}
+        >
+          {allPhotos.map((url, i) => (
+            <View key={`${i}-${url}`} style={{ width: containerWidth, height }}>
+              <SingleImage uri={url} borderRadius={0} colors={colors} />
+            </View>
+          ))}
+        </ScrollView>
+      )}
       {/* Pagination dots */}
       <View style={styles.dotsRow}>
         {allPhotos.map((_, i) => (
@@ -151,7 +156,6 @@ function SingleImage({ uri, borderRadius, colors }: { uri: string; borderRadius:
 
 /**
  * Native avatar image component.
- * Web counterpart in PostImage.web.tsx.
  */
 export function AvatarImage({
   uri,
@@ -213,10 +217,7 @@ const styles = StyleSheet.create({
   } as any,
   loadingOverlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    top: 0, left: 0, right: 0, bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.03)',
@@ -228,8 +229,7 @@ const styles = StyleSheet.create({
   dotsRow: {
     position: 'absolute',
     bottom: 10,
-    left: 0,
-    right: 0,
+    left: 0, right: 0,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',

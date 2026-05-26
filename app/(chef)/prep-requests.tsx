@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
-import { ScreenWrapper, Button, Input } from '@/components/ui';
+import { ScreenWrapper, Button, Input, PostImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { prepRequestsApi } from '@/lib/api';
 import { infoAlert } from '@/lib/crossAlert';
@@ -94,7 +94,12 @@ export default function PrepRequestsManagementScreen() {
             const sc = STATUS_COLORS[req.status] || STATUS_COLORS.pending;
             const isResponding = respondingId === req.id;
             return (
-              <View key={req.id} style={[styles.card, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
+              <View key={req.id} style={[styles.card, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm, overflow: 'hidden' }]}>
+                {/* Dish photo */}
+                {req.menu_item?.photos?.[0] && (
+                  <PostImage photos={req.menu_item.photos} height={100} borderRadius={0} showCarousel={false}
+                    style={{ marginHorizontal: -16, marginTop: -16, marginBottom: 12 }} />
+                )}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
                   <Text style={{ color: colors.onSurface, fontWeight: '700', fontSize: 16 }}>{req.menu_item?.title || 'Dish'}</Text>
                   <View style={[styles.statusBadge, { backgroundColor: sc.bg }]}>

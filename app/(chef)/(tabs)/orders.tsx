@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useOrdersStore } from '@/stores/ordersStore';
-import { ScreenWrapper, Button, AvatarImage } from '@/components/ui';
+import { ScreenWrapper, Button, AvatarImage, PostImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -77,6 +77,11 @@ export default function ChefOrdersScreen() {
 
     return (
       <View style={[styles.card, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
+        {/* Dish photo */}
+        {item.post?.photos?.[0] && (
+          <PostImage photos={item.post.photos} height={120} borderRadius={0} showCarousel={false}
+            style={{ marginHorizontal: -16, marginTop: -16, marginBottom: 12, borderTopLeftRadius: 16, borderTopRightRadius: 16 }} />
+        )}
         <View style={styles.cardTop}>
           <AvatarImage uri={item.customer?.profile_photo_url} size={44} emoji="👤" />
           <View style={{ flex: 1 }}>
@@ -176,7 +181,7 @@ export default function ChefOrdersScreen() {
 const styles = StyleSheet.create({
   title: { fontFamily: 'NotoSerif-Bold', fontSize: 24, fontWeight: '700' },
   tab: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, borderWidth: 1 },
-  card: { borderRadius: 16, padding: 16 },
+  card: { borderRadius: 16, padding: 16, overflow: 'hidden' },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   customerName: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 15, fontWeight: '600' },

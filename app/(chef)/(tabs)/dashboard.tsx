@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useOrdersStore } from '@/stores/ordersStore';
 import { useChefProfileStore } from '@/stores/appStores';
 import { useRealtimeChefOrders } from '@/hooks/useRealtime';
-import { Button, ScreenWrapper, AvatarImage } from '@/components/ui';
+import { Button, ScreenWrapper, AvatarImage, PostImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -71,7 +71,9 @@ export default function DashboardScreen() {
   const recentOrders = chefOrders.slice(0, 5).map((o) => ({
       id: o.id,
       customer: o.customer?.full_name || 'Customer',
+      customer_photo: o.customer?.profile_photo_url,
       dish: o.post?.title || 'Order',
+      dish_photos: o.post?.photos || [],
       qty: o.quantity,
       order_status: o.order_status,
       time: getTimeAgo(o.created_at),
@@ -153,7 +155,8 @@ export default function DashboardScreen() {
 
         {recentOrders.map((order: any) => (
           <View key={order.id} style={[styles.orderRow, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
-            <AvatarImage uri={order.customer_photo} size={40} emoji="👤" />
+            <PostImage photos={order.dish_photos} height={44} borderRadius={10} fallbackSize={20} showCarousel={false}
+              style={{ width: 44 }} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.orderCustomer, { color: colors.onSurface }]}>{order.customer}</Text>
               <Text style={[styles.orderDish, { color: colors.onSurfaceVariant }]}>{order.dish} x{order.qty}</Text>

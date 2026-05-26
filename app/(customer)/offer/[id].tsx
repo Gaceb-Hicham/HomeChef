@@ -240,7 +240,7 @@ export default function OfferDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  hero: { height: 260, alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  hero: { height: 260, overflow: 'hidden', position: 'relative' },
   backBtn: { position: 'absolute', top: 16, left: 16, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   saveBtn: { position: 'absolute', top: 12, right: 12, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   shareBtn: { position: 'absolute', top: 12, right: 60, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
