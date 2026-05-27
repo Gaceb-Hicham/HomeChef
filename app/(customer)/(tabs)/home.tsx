@@ -163,6 +163,9 @@ export default function HomeScreen() {
           <View style={styles.chefRow}>
             <AvatarImage uri={item.chef?.profile_photo_url} size={24} emoji="👨‍🍳" />
             <Text style={[styles.chefName, { color: colors.onSurfaceVariant }]}>{chefName}</Text>
+            {item.chef?.chef_profiles?.is_verified && (
+              <Ionicons name="checkmark-circle" size={14} color="#2563eb" style={{ marginLeft: 2 }} />
+            )}
             <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: item.chef?.chef_profiles?.is_open !== false ? '#16a34a' : '#dc2626', marginLeft: 4 }} />
             <View style={{ flex: 1 }} />
             <Ionicons name="time-outline" size={14} color={colors.outline} />

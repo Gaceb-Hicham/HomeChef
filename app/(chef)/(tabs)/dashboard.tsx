@@ -132,6 +132,8 @@ export default function DashboardScreen() {
           {[
             { icon: 'hand-left', label: 'Requests', route: '/(chef)/prep-requests', bg: '#fef3c7', color: '#b45309', count: pendingOrders.length },
             { icon: 'flash', label: 'Flash Sale', route: '/(chef)/flash-sale', bg: '#fce4ec', color: '#dc2626' },
+            { icon: 'repeat', label: 'Subscribers', route: '/(chef)/subscriptions', bg: '#ede9fe', color: '#7c3aed' },
+            { icon: 'bar-chart', label: 'Analytics', route: '/(chef)/analytics', bg: '#dbeafe', color: '#1d4ed8' },
             { icon: 'megaphone', label: 'Teaser', route: '/(chef)/teaser', bg: '#e0e7ff', color: '#4338ca' },
             { icon: 'star-half', label: 'Reviews', route: '/(chef)/reviews', bg: '#dcfce7', color: '#16a34a' },
           ].map((action) => (

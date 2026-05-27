@@ -137,7 +137,12 @@ export default function ChefProfileScreen() {
           <View style={[styles.avatar, { backgroundColor: colors.primaryFixed }]}>
             <AvatarImage uri={chefProfile.user?.profile_photo_url || chefProfile.cover_photo_url} size={72} emoji="👨‍🍳" />
           </View>
-          <Text style={[styles.name, { color: colors.onBackground }]}>{chefName}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <Text style={[styles.name, { color: colors.onBackground }]}>{chefName}</Text>
+            {chefProfile.is_verified && (
+              <Ionicons name="checkmark-circle" size={20} color="#2563eb" />
+            )}
+          </View>
           <Text style={[styles.kitchen, { color: colors.primary }]}>{kitchenName}</Text>
 
           {/* Stats */}

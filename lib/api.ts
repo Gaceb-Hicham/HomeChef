@@ -22,7 +22,7 @@ export const postsApi = {
         *,
         chef:users!chef_id (
           id, full_name, profile_photo_url, city, area,
-          chef_profiles ( kitchen_name, rating_average, total_reviews, is_open )
+          chef_profiles ( kitchen_name, rating_average, total_reviews, is_open, is_verified )
         )
       `)
       .eq('is_active', true)
@@ -50,7 +50,7 @@ export const postsApi = {
         *,
         chef:users!chef_id (
           id, full_name, profile_photo_url, city,
-          chef_profiles ( kitchen_name, rating_average, total_reviews )
+          chef_profiles ( kitchen_name, rating_average, total_reviews, is_verified )
         ),
         reviews (
           id, overall_rating, comment, created_at,
@@ -898,13 +898,13 @@ export const subscriptionsApi = {
     return { data: data || [], error: error?.message || null };
   },
 
-  /** Get chef's subscribers */
+  /** Get chef's subscribers (all, including pending) */
   async getByChef(chefId: string) {
     const { data, error } = await supabase
       .from('subscriptions')
       .select(`*, customer:users!customer_id(full_name, profile_photo_url)`)
       .eq('chef_id', chefId)
-      .eq('is_active', true);
+      .order('created_at', { ascending: false });
     return { data: data || [], error: error?.message || null };
   },
 

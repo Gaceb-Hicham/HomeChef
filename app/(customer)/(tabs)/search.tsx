@@ -148,9 +148,14 @@ export default function SearchScreen() {
               <PostImage photos={item.photos} height={52} borderRadius={14} fallbackSize={28} style={{ width: 52 }} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.resultTitle, { color: colors.onSurface }]}>{item.title}</Text>
-                <Text style={[styles.resultChef, { color: colors.onSurfaceVariant }]}>
-                  by {item.chef?.full_name || 'Chef'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                  <Text style={[styles.resultChef, { color: colors.onSurfaceVariant }]}>
+                    by {item.chef?.full_name || 'Chef'}
+                  </Text>
+                  {item.chef?.chef_profiles?.is_verified && (
+                    <Ionicons name="checkmark-circle" size={13} color="#2563eb" />
+                  )}
+                </View>
               </View>
               <Text style={[styles.resultPrice, { color: colors.primary }]}>{item.price} DA</Text>
             </TouchableOpacity>
@@ -203,7 +208,10 @@ export default function SearchScreen() {
                       style={[styles.chefRow, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
                       <AvatarImage uri={c.cover_photo_url} size={48} emoji="👨‍🍳" />
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.chefName, { color: colors.onSurface }]}>{c.kitchen_name}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Text style={[styles.chefName, { color: colors.onSurface }]}>{c.kitchen_name}</Text>
+                          {c.is_verified && <Ionicons name="checkmark-circle" size={14} color="#2563eb" />}
+                        </View>
                         <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{(c.specialty_tags || []).join(' • ')}</Text>
                       </View>
                       {c.rating_average > 0 && (

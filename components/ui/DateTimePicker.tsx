@@ -48,7 +48,7 @@ export function DateTimePicker({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const min = minDate || today;
-  const max = maxDate || new Date(today.getTime() + 180 * 24 * 60 * 60 * 1000); // +6 months
+  const max = maxDate || new Date(today.getTime() + 180 * 24 * 60 * 60 * 1000);
 
   const [viewMonth, setViewMonth] = useState(() => {
     if (date) {
@@ -58,13 +58,12 @@ export function DateTimePicker({
     return { year: today.getFullYear(), month: today.getMonth() };
   });
 
-  const formatDisplay = (d: string, t?: string) => {
-    if (!d) return label || 'Select date';
+  const formatDateDisplay = (d: string) => {
+    if (!d) return 'Select date';
     const dt = new Date(d);
     const dayName = DAYS[dt.getUTCDay()];
     const monthName = MONTHS[dt.getUTCMonth()].slice(0, 3);
-    const display = `${dayName}, ${dt.getUTCDate()} ${monthName} ${dt.getUTCFullYear()}`;
-    return t ? `${display} at ${t}` : display;
+    return `${dayName}, ${dt.getUTCDate()} ${monthName} ${dt.getUTCFullYear()}`;
   };
 
   // Calendar grid
@@ -73,7 +72,6 @@ export function DateTimePicker({
     const month = viewMonth.month;
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-
     const grid: (number | null)[] = [];
     for (let i = 0; i < firstDay; i++) grid.push(null);
     for (let d = 1; d <= daysInMonth; d++) grid.push(d);
@@ -99,28 +97,23 @@ export function DateTimePicker({
     const m = String(viewMonth.month + 1).padStart(2, '0');
     const d = String(day).padStart(2, '0');
     onDateChange(`${viewMonth.year}-${m}-${d}`);
-    if (!showTime) setShowModal(false);
+    setShowModal(false);
   };
 
   const prevMonth = () => {
     setViewMonth(v => v.month === 0 ? { year: v.year - 1, month: 11 } : { ...v, month: v.month - 1 });
   };
-
   const nextMonth = () => {
     setViewMonth(v => v.month === 11 ? { year: v.year + 1, month: 0 } : { ...v, month: v.month + 1 });
   };
 
-  // Handle manual text input with auto-formatting DD/MM/YYYY
   const handleTextInput = (text: string) => {
-    // Remove non-digits
     const digits = text.replace(/\D/g, '');
     let formatted = '';
     if (digits.length >= 1) formatted = digits.slice(0, 2);
     if (digits.length >= 3) formatted += '/' + digits.slice(2, 4);
     if (digits.length >= 5) formatted += '/' + digits.slice(4, 8);
     setInputText(formatted);
-
-    // Parse when complete
     if (digits.length === 8) {
       const day = parseInt(digits.slice(0, 2));
       const month = parseInt(digits.slice(2, 4));
@@ -133,24 +126,50 @@ export function DateTimePicker({
         if (parsed >= min && parsed <= max) {
           onDateChange(dateStr);
           setViewMonth({ year, month: month - 1 });
+          setShowModal(false);
         }
       }
     }
   };
 
   return (
-    <>
-      {/* Display button */}
+    <View style={{ marginBottom: 16 }}>
+      {/* Label */}
+      {label && <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>{label}</Text>}
+
+      {/* Date button — opens calendar modal */}
       <TouchableOpacity
         onPress={() => setShowModal(true)}
         style={[styles.displayBtn, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant }]}
       >
         <Ionicons name="calendar-outline" size={18} color={colors.primary} />
         <Text style={[styles.displayText, { color: date ? colors.onSurface : colors.outline }]}>
-          {formatDisplay(date, time)}
+          {formatDateDisplay(date)}
         </Text>
         <Ionicons name="chevron-down" size={16} color={colors.outline} />
       </TouchableOpacity>
+
+      {/* Time picker — always visible below date when showTime=true */}
+      {showTime && onTimeChange && (
+        <View>
+          <Text style={[styles.timeTitle, { color: colors.onSurfaceVariant }]}>🕐 Select time</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {TIME_SLOTS.map(t => (
+              <TouchableOpacity key={t} onPress={() => onTimeChange(t)}
+                style={[styles.timeChip, {
+                  backgroundColor: time === t ? colors.primary : colors.surfaceContainerLow,
+                  borderWidth: time === t ? 0 : 1,
+                  borderColor: colors.outlineVariant,
+                }]}>
+                <Ionicons name="time-outline" size={13} color={time === t ? '#fff' : colors.onSurface} />
+                <Text style={{ color: time === t ? '#fff' : colors.onSurface, fontWeight: '600', fontSize: 13, marginLeft: 4 }}>
+                  {t}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Calendar Modal */}
       <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
@@ -158,9 +177,7 @@ export function DateTimePicker({
           <View style={[styles.modalContent, { backgroundColor: colors.surfaceContainerLowest, ...shadows.lg }]}>
             {/* Header */}
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.onSurface }]}>
-                {label || 'Select Date'}
-              </Text>
+              <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Select Date</Text>
               <TouchableOpacity onPress={() => setShowModal(false)}>
                 <Ionicons name="close" size={24} color={colors.onSurfaceVariant} />
               </TouchableOpacity>
@@ -171,7 +188,7 @@ export function DateTimePicker({
               <Ionicons name="create-outline" size={16} color={colors.outline} />
               <TextInput
                 style={[styles.textInput, { color: colors.onSurface }]}
-                placeholder="DD/MM/YYYY"
+                placeholder="Or type: DD/MM/YYYY"
                 placeholderTextColor={colors.outline}
                 value={inputText}
                 onChangeText={handleTextInput}
@@ -229,49 +246,31 @@ export function DateTimePicker({
                 );
               })}
             </View>
-
-            {/* Time picker */}
-            {showTime && onTimeChange && (
-              <>
-                <Text style={[styles.timeLabel, { color: colors.onSurface }]}>Time</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-                  {TIME_SLOTS.map(t => (
-                    <TouchableOpacity key={t} onPress={() => onTimeChange(t)}
-                      style={[styles.timeChip, { backgroundColor: time === t ? colors.primary : colors.surfaceContainerLow }]}>
-                      <Text style={{ color: time === t ? '#fff' : colors.onSurface, fontWeight: '600', fontSize: 13 }}>{t}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </>
-            )}
-
-            {/* Confirm */}
-            <TouchableOpacity
-              onPress={() => setShowModal(false)}
-              style={[styles.confirmBtn, { backgroundColor: colors.primary }]}
-            >
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Confirm</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  label: { fontSize: 13, fontWeight: '600', marginBottom: 6 },
   displayBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 14, paddingVertical: 13, borderRadius: 12, borderWidth: 1, marginBottom: 16,
+    paddingHorizontal: 14, paddingVertical: 13, borderRadius: 12, borderWidth: 1, marginBottom: 10,
   },
   displayText: { flex: 1, fontSize: 14, fontWeight: '500' },
+  timeTitle: { fontSize: 13, fontWeight: '600', marginBottom: 8 },
+  timeChip: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, marginRight: 8,
+  },
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end',
   },
   modalContent: {
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 20, paddingBottom: 32, maxHeight: '85%',
+    padding: 20, paddingBottom: 32,
   },
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16,
@@ -289,16 +288,9 @@ const styles = StyleSheet.create({
   monthLabel: { fontSize: 16, fontWeight: '700' },
   dayHeaders: { flexDirection: 'row', marginBottom: 4 },
   dayHeader: { flex: 1, textAlign: 'center', fontSize: 12, fontWeight: '600' },
-  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16 },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 },
   dayCell: {
     width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center',
   },
   dayText: { fontSize: 14 },
-  timeLabel: { fontWeight: '600', fontSize: 14, marginBottom: 8 },
-  timeChip: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, marginRight: 8,
-  },
-  confirmBtn: {
-    paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 8,
-  },
 });

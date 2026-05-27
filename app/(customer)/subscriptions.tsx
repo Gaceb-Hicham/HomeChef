@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
-import { ScreenWrapper, Button, PostImage, DateTimePicker } from '@/components/ui';
+import { ScreenWrapper, Button, PostImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { subscriptionsApi, prepMenuApi } from '@/lib/api';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
@@ -79,8 +79,7 @@ export default function SubscriptionsScreen() {
       price: selectedItem.base_price * formQty,
       discount_percentage: discount,
       next_order_date: nextDate.toISOString().split('T')[0],
-      delivery_time: deliveryTime,
-      status: 'pending_approval',
+      is_active: false, // starts inactive until chef approves
     });
     setIsCreating(false);
 
@@ -112,9 +111,10 @@ export default function SubscriptionsScreen() {
     ]);
   };
 
-  const pendingSubs = subs.filter(s => s.status === 'pending_approval');
-  const activeSubs = subs.filter(s => s.is_active && s.status !== 'pending_approval');
-  const pausedSubs = subs.filter(s => !s.is_active && s.status !== 'pending_approval');
+  // Pending = is_active false (waiting for chef approval)
+  // Active = is_active true
+  const pendingSubs = subs.filter(s => !s.is_active);
+  const activeSubs = subs.filter(s => s.is_active);
 
   return (
     <ScreenWrapper>
@@ -353,25 +353,7 @@ export default function SubscriptionsScreen() {
           </>
         )}
 
-        {pausedSubs.length > 0 && (
-          <>
-            <Text style={[styles.section, { color: colors.onBackground }]}>Paused ({pausedSubs.length})</Text>
-            {pausedSubs.map((sub) => (
-              <View key={sub.id} style={[styles.subCard, { backgroundColor: colors.surfaceContainerLowest, borderLeftColor: colors.outline, ...shadows.sm, opacity: 0.7 }]}>
-                <Text style={{ color: colors.onSurface, fontWeight: '700' }}>{sub.item_title}</Text>
-                <Text style={{ color: colors.onSurfaceVariant, fontSize: 13 }}>from {sub.chef?.full_name}</Text>
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
-                  <TouchableOpacity style={[styles.subBtn, { backgroundColor: '#dcfce7' }]} onPress={() => handleToggle(sub.id, false)}>
-                    <Ionicons name="play" size={14} color="#16a34a" /><Text style={{ color: '#16a34a', fontWeight: '600', marginLeft: 4 }}>Resume</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.subBtn, { backgroundColor: '#fce4ec' }]} onPress={() => handleCancel(sub.id)}>
-                    <Ionicons name="trash" size={14} color="#dc2626" /><Text style={{ color: '#dc2626', fontWeight: '600', marginLeft: 4 }}>Remove</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </>
-        )}
+
         <View style={{ height: 30 }} />
       </ScrollView>
     </ScreenWrapper>
