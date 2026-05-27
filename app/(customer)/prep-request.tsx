@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from '
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
-import { Button, Input, ScreenWrapper } from '@/components/ui';
+import { ScreenWrapper, Button, Input, DateTimePicker } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useToast } from '@/components/ui/Toast';
@@ -203,43 +203,14 @@ export default function PrepRequestScreen() {
 
         {/* Date & Time */}
         <Text style={[styles.section, { color: colors.onBackground }]}>📅 When do you want it?</Text>
-        
-        {/* Date chips */}
-        <Text style={{ color: colors.onSurfaceVariant, fontSize: 13, fontWeight: '600', marginBottom: 6 }}>Date</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-          {[
-            { label: 'Tomorrow', days: 1 },
-            { label: 'In 2 days', days: 2 },
-            { label: 'In 3 days', days: 3 },
-            { label: 'In 5 days', days: 5 },
-            { label: 'In 7 days', days: 7 },
-            { label: 'In 10 days', days: 10 },
-          ].map(opt => {
-            const d = new Date(); d.setDate(d.getDate() + opt.days);
-            const iso = d.toISOString().split('T')[0];
-            return (
-              <TouchableOpacity key={opt.days} onPress={() => setDate(iso)}
-                style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, marginRight: 8,
-                  backgroundColor: date === iso ? colors.primary : colors.surfaceContainerLow }}>
-                <Ionicons name="calendar-outline" size={13} color={date === iso ? '#fff' : colors.onSurface} />
-                <Text style={{ color: date === iso ? '#fff' : colors.onSurface, fontWeight: '600', fontSize: 13, marginLeft: 4 }}>{opt.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* Time chips */}
-        <Text style={{ color: colors.onSurfaceVariant, fontSize: 13, fontWeight: '600', marginBottom: 6 }}>Time</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
-          {['11:00', '12:00', '13:00', '14:00', '16:00', '18:00', '20:00'].map(t => (
-            <TouchableOpacity key={t} onPress={() => setTime(t)}
-              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, marginRight: 8,
-                backgroundColor: time === t ? colors.primary : colors.surfaceContainerLow }}>
-              <Ionicons name="time-outline" size={13} color={time === t ? '#fff' : colors.onSurface} />
-              <Text style={{ color: time === t ? '#fff' : colors.onSurface, fontWeight: '600', fontSize: 13, marginLeft: 4 }}>{t}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <DateTimePicker
+          date={date}
+          time={time}
+          onDateChange={setDate}
+          onTimeChange={setTime}
+          showTime
+          label="Delivery date & time"
+        />
 
         {/* Quantity */}
         <Text style={[styles.section, { color: colors.onBackground }]}>🔢 Quantity</Text>

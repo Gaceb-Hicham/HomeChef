@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
-import { ScreenWrapper, Button, PostImage } from '@/components/ui';
+import { ScreenWrapper, Button, PostImage, DateTimePicker } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { subscriptionsApi, prepMenuApi } from '@/lib/api';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
@@ -28,6 +28,7 @@ export default function SubscriptionsScreen() {
   const [formFreq, setFormFreq] = useState<'weekly' | 'biweekly'>('weekly');
   const [formDay, setFormDay] = useState('Monday');
   const [formQty, setFormQty] = useState(1);
+  const [deliveryTime, setDeliveryTime] = useState('12:00');
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => { fetchSubs(); }, []);
@@ -78,13 +79,15 @@ export default function SubscriptionsScreen() {
       price: selectedItem.base_price * formQty,
       discount_percentage: discount,
       next_order_date: nextDate.toISOString().split('T')[0],
+      delivery_time: deliveryTime,
+      status: 'pending_approval',
     });
     setIsCreating(false);
 
     if (error) {
       infoAlert('Error', error);
     } else {
-      showToast('Subscribed successfully! 🎉', 'success');
+      showToast('Request sent to chef for approval! ✅', 'success');
       setShowForm(false);
       setSelectedItem(null);
       setFormQty(1);
@@ -109,8 +112,9 @@ export default function SubscriptionsScreen() {
     ]);
   };
 
-  const activeSubs = subs.filter(s => s.is_active);
-  const pausedSubs = subs.filter(s => !s.is_active);
+  const pendingSubs = subs.filter(s => s.status === 'pending_approval');
+  const activeSubs = subs.filter(s => s.is_active && s.status !== 'pending_approval');
+  const pausedSubs = subs.filter(s => !s.is_active && s.status !== 'pending_approval');
 
   return (
     <ScreenWrapper>
@@ -223,6 +227,20 @@ export default function SubscriptionsScreen() {
                   </TouchableOpacity>
                 </View>
 
+                {/* Step 5: Delivery Time */}
+                <Text style={[styles.stepLabel, { color: colors.primary }]}>
+                  <Ionicons name="time" size={14} /> Step 5 — Delivery time
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
+                  {['10:00', '11:00', '12:00', '13:00', '14:00', '16:00', '18:00', '20:00'].map(t => (
+                    <TouchableOpacity key={t} onPress={() => setDeliveryTime(t)}
+                      style={[styles.dayChip, { backgroundColor: deliveryTime === t ? colors.primary : colors.surfaceContainerLow }]}>
+                      <Ionicons name="time-outline" size={13} color={deliveryTime === t ? '#fff' : colors.onSurface} />
+                      <Text style={{ color: deliveryTime === t ? '#fff' : colors.onSurface, fontWeight: '600', fontSize: 12, marginLeft: 4 }}>{t}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
                 {/* Price Summary */}
                 <View style={[styles.priceSummary, { backgroundColor: '#dcfce7' }]}>
                   <View>
@@ -239,7 +257,15 @@ export default function SubscriptionsScreen() {
                   </View>
                 </View>
 
-                <Button title="Subscribe 🔔" onPress={handleCreate} loading={isCreating} size="lg" style={{ marginTop: 16 }} />
+                {/* Payment info */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#eff6ff', borderRadius: 10 }}>
+                  <Ionicons name="information-circle" size={18} color="#2563eb" />
+                  <Text style={{ color: '#1e40af', fontSize: 12, flex: 1, lineHeight: 17 }}>
+                    Payment is collected on each delivery. Chef must approve before subscription starts.
+                  </Text>
+                </View>
+
+                <Button title="Request Subscription ✅" onPress={handleCreate} loading={isCreating} size="lg" style={{ marginTop: 16 }} />
               </>
             )}
           </View>
@@ -254,6 +280,33 @@ export default function SubscriptionsScreen() {
               Visit a chef's profile and tap "Subscribe" to set up recurring orders
             </Text>
           </View>
+        )}
+
+        {/* Pending Approval */}
+        {pendingSubs.length > 0 && (
+          <>
+            <Text style={[styles.section, { color: colors.onBackground }]}>⏳ Waiting for Approval ({pendingSubs.length})</Text>
+            {pendingSubs.map((sub) => (
+              <View key={sub.id} style={[styles.subCard, { backgroundColor: colors.surfaceContainerLowest, borderLeftColor: '#f59e0b', ...shadows.sm }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <Text style={{ color: colors.onSurface, fontWeight: '700', fontSize: 16 }}>{sub.item_title}</Text>
+                  <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
+                    <Text style={{ color: '#b45309', fontSize: 11, fontWeight: '700' }}>Pending</Text>
+                  </View>
+                </View>
+                <Text style={{ color: colors.onSurfaceVariant, fontSize: 13 }}>
+                  {sub.frequency} · {sub.quantity}x · {sub.preferred_day} · {sub.delivery_time || '—'}
+                </Text>
+                <Text style={{ color: colors.outline, fontSize: 12, marginTop: 4 }}>
+                  Chef will review and approve your request
+                </Text>
+                <TouchableOpacity onPress={() => handleCancel(sub.id)}
+                  style={{ alignSelf: 'flex-start', marginTop: 8, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: '#dc2626' }}>
+                  <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: '600' }}>Cancel Request</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </>
         )}
 
         {/* Existing Subs */}

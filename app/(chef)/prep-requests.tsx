@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
-import { ScreenWrapper, Button, Input, PostImage } from '@/components/ui';
+import { ScreenWrapper, Button, Input, PostImage, DateTimePicker } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { prepRequestsApi } from '@/lib/api';
 import { infoAlert } from '@/lib/crossAlert';
@@ -129,26 +129,11 @@ export default function PrepRequestsManagementScreen() {
                             placeholder="Counter price (DA)" placeholderTextColor={colors.outline} keyboardType="numeric"
                             value={counterPrice} onChangeText={setCounterPrice} />
                         </View>
-                        <Text style={{ color: colors.onSurfaceVariant, fontSize: 12, fontWeight: '600', marginTop: 10, marginBottom: 6 }}>Counter date</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                          {[
-                            { label: 'Tomorrow', days: 1 },
-                            { label: '+2 days', days: 2 },
-                            { label: '+3 days', days: 3 },
-                            { label: '+5 days', days: 5 },
-                            { label: '+7 days', days: 7 },
-                          ].map(opt => {
-                            const d = new Date(); d.setDate(d.getDate() + opt.days);
-                            const iso = d.toISOString().split('T')[0];
-                            return (
-                              <TouchableOpacity key={opt.days} onPress={() => setCounterDate(iso)}
-                                style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 10, marginRight: 8,
-                                  backgroundColor: counterDate === iso ? colors.primary : colors.surfaceContainerLow }}>
-                                <Text style={{ color: counterDate === iso ? '#fff' : colors.onSurface, fontWeight: '600', fontSize: 12 }}>{opt.label}</Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </ScrollView>
+                        <DateTimePicker
+                          date={counterDate}
+                          onDateChange={setCounterDate}
+                          label="Counter date"
+                        />
                         <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
                           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#16a34a' }]} onPress={() => handleAccept(req.id)}>
                             <Ionicons name="checkmark" size={16} color="#fff" /><Text style={{ color: '#fff', fontWeight: '700', marginLeft: 4 }}>Accept</Text>

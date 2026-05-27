@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
-import { ScreenWrapper, Button, Input } from '@/components/ui';
+import { ScreenWrapper, Button, Input, DateTimePicker } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { specialtiesApi } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
@@ -24,16 +24,9 @@ export default function PreOrderScreen() {
   const [unavailableDates, setUnavailableDates] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Generate next 30 days for calendar
-  const today = new Date();
-  const calendarDays = Array.from({ length: 30 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() + i + 1);
-    return d.toISOString().split('T')[0];
-  });
-
-  // Time slots
-  const timeSlots = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
+  // Minimum date = tomorrow + prep time
+  const minDate = new Date();
+  minDate.setDate(minDate.getDate() + Math.max(1, Math.ceil(parseInt(params.prepTime || '24') / 24)));
 
   useEffect(() => {
     loadAvailability();
@@ -114,48 +107,17 @@ export default function PreOrderScreen() {
           </View>
         </View>
 
-        {/* Calendar Strip */}
-        <Text style={[styles.section, { color: colors.onBackground }]}>📅 Select a Date</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
-          {calendarDays.map((dateStr) => {
-            const isUnavailable = unavailableDates.includes(dateStr);
-            const isSelected = selectedDate === dateStr;
-            return (
-              <TouchableOpacity
-                key={dateStr}
-                disabled={isUnavailable}
-                onPress={() => setSelectedDate(dateStr)}
-                style={[
-                  styles.dateChip,
-                  isSelected && { backgroundColor: colors.primary },
-                  isUnavailable && { opacity: 0.3, backgroundColor: colors.surfaceContainerLow },
-                  !isSelected && !isUnavailable && { backgroundColor: colors.surfaceContainerLow },
-                ]}
-              >
-                <Text style={[styles.dayName, { color: isSelected ? '#fff' : colors.outline }]}>{getDayName(dateStr)}</Text>
-                <Text style={[styles.dayNum, { color: isSelected ? '#fff' : colors.onSurface }]}>{getDayNum(dateStr)}</Text>
-                {isUnavailable && <Ionicons name="close-circle" size={12} color="#dc2626" />}
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* Time Slots */}
-        <Text style={[styles.section, { color: colors.onBackground }]}>🕐 Select a Time</Text>
-        <View style={styles.timeSlotsGrid}>
-          {timeSlots.map((slot) => (
-            <TouchableOpacity
-              key={slot}
-              onPress={() => setSelectedTime(slot)}
-              style={[
-                styles.timeSlot,
-                { backgroundColor: selectedTime === slot ? colors.primary : colors.surfaceContainerLow },
-              ]}
-            >
-              <Text style={{ color: selectedTime === slot ? '#fff' : colors.onSurface, fontWeight: '600' }}>{slot}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* Date & Time */}
+        <Text style={[styles.section, { color: colors.onBackground }]}>📅 Select Date & Time</Text>
+        <DateTimePicker
+          date={selectedDate}
+          time={selectedTime}
+          onDateChange={setSelectedDate}
+          onTimeChange={setSelectedTime}
+          showTime
+          minDate={minDate}
+          label="Delivery date & time"
+        />
 
         {/* Quantity */}
         <Text style={[styles.section, { color: colors.onBackground }]}>🔢 Quantity</Text>
