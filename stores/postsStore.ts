@@ -28,11 +28,15 @@ interface PostsState {
   searchResults: PostWithChef[];
   isLoading: boolean;
   isRefreshing: boolean;
+  isLoadingMore: boolean;
+  hasMore: boolean;
+  feedOffset: number;
   error: string | null;
 
   // Actions
   fetchFeed: (city?: string) => Promise<void>;
   refreshFeed: (city?: string) => Promise<void>;
+  loadMoreFeed: (city?: string) => Promise<void>;
   fetchPostById: (id: string) => Promise<void>;
   fetchChefArchive: (chefId: string) => Promise<void>;
   searchPosts: (query: string) => Promise<void>;
@@ -50,18 +54,34 @@ export const usePostsStore = create<PostsState>((set, get) => ({
   searchResults: [],
   isLoading: false,
   isRefreshing: false,
+  isLoadingMore: false,
+  hasMore: true,
+  feedOffset: 0,
   error: null,
 
   fetchFeed: async (city) => {
-    set({ isLoading: true, error: null });
-    const { data, error } = await postsApi.getFeed(city);
-    set({ feed: data as PostWithChef[], isLoading: false, error });
+    set({ isLoading: true, error: null, feedOffset: 0 });
+    const { data, error, hasMore } = await postsApi.getFeed(city, 15, 0);
+    set({ feed: data as PostWithChef[], isLoading: false, error, hasMore, feedOffset: (data || []).length });
   },
 
   refreshFeed: async (city) => {
-    set({ isRefreshing: true });
-    const { data, error } = await postsApi.getFeed(city);
-    set({ feed: data as PostWithChef[], isRefreshing: false, error });
+    set({ isRefreshing: true, feedOffset: 0 });
+    const { data, error, hasMore } = await postsApi.getFeed(city, 15, 0);
+    set({ feed: data as PostWithChef[], isRefreshing: false, error, hasMore, feedOffset: (data || []).length });
+  },
+
+  loadMoreFeed: async (city) => {
+    const { hasMore, isLoadingMore, feedOffset } = get();
+    if (!hasMore || isLoadingMore) return;
+    set({ isLoadingMore: true });
+    const { data, error, hasMore: more } = await postsApi.getFeed(city, 15, feedOffset);
+    set({
+      feed: [...get().feed, ...(data as PostWithChef[])],
+      isLoadingMore: false,
+      hasMore: more,
+      feedOffset: feedOffset + (data || []).length,
+    });
   },
 
   fetchPostById: async (id) => {

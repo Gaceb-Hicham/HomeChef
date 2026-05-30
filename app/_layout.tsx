@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { initializePayments } from '@/lib/payments';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ToastProvider } from '@/components/ui/Toast';
+import { OfflineBanner } from '@/components/ui/OfflineBanner';
 
 // Initialize i18n (side-effect import)
 import '@/i18n';
@@ -77,6 +78,7 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <ToastProvider>
+        <OfflineBanner />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(customer)" options={{ headerShown: false }} />

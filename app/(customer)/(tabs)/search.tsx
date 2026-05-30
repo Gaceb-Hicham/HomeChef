@@ -109,27 +109,28 @@ export default function SearchScreen() {
       </View>
 
       {isSearching ? (
-        /* Filter chips */
         <>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20, gap: 8, marginBottom: 12, alignItems: 'center' }}>
-            {[
-              { key: 'under500', label: 'Under 500 DA', icon: 'pricetag-outline' },
-              { key: '500-1000', label: '500-1000 DA', icon: 'pricetag-outline' },
-              { key: '1000+', label: '1000+ DA', icon: 'pricetag-outline' },
-              { key: '4stars', label: '⭐ 4+', icon: 'star-outline' },
-              { key: 'delivery', label: '🚗 Delivery', icon: 'car-outline' },
-              { key: 'pickup', label: '🏠 Pickup', icon: 'storefront-outline' },
-            ].map((f) => (
-              <TouchableOpacity key={f.key} onPress={() => toggleFilter(f.key)}
-                style={[styles.filterChip, {
-                  backgroundColor: activeFilters.has(f.key) ? colors.primary : colors.surfaceContainerLow,
-                  borderColor: activeFilters.has(f.key) ? colors.primary : colors.outlineVariant,
-                }]}>
-                <Text style={{ color: activeFilters.has(f.key) ? '#fff' : colors.onSurfaceVariant, fontSize: 13, fontWeight: '600' }}>{f.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <View style={{ marginBottom: 12 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingVertical: 4 }}>
+              {[
+                { key: 'under500', label: 'Under 500 DA', icon: 'pricetag-outline' },
+                { key: '500-1000', label: '500-1000 DA', icon: 'pricetag-outline' },
+                { key: '1000+', label: '1000+ DA', icon: 'pricetag-outline' },
+                { key: '4stars', label: '⭐ 4+', icon: 'star-outline' },
+                { key: 'delivery', label: '🚗 Delivery', icon: 'car-outline' },
+                { key: 'pickup', label: '🏠 Pickup', icon: 'storefront-outline' },
+              ].map((f) => (
+                <TouchableOpacity key={f.key} onPress={() => toggleFilter(f.key)}
+                  style={[styles.filterChip, {
+                    backgroundColor: activeFilters.has(f.key) ? colors.primary : colors.surfaceContainerLow,
+                    borderColor: activeFilters.has(f.key) ? colors.primary : colors.outlineVariant,
+                  }]}>
+                  <Text style={{ color: activeFilters.has(f.key) ? '#fff' : colors.onSurfaceVariant, fontSize: 13, fontWeight: '600' }}>{f.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
         {/* Search results */}
         <FlatList data={filteredResults} keyExtractor={(i: any) => i.id}
           contentContainerStyle={{ paddingHorizontal: 20, gap: 10, paddingBottom: 24 }}

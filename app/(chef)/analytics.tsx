@@ -5,7 +5,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { ScreenWrapper } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '@/lib/supabase';
+import { analyticsApi } from '@/lib/api';
 
 const SCREEN_W = Dimensions.get('window').width;
 
@@ -28,53 +28,15 @@ export default function AnalyticsScreen() {
     const chefId = profile?.id;
     if (!chefId) return;
 
-    // Total orders & revenue
-    const { data: orders } = await supabase.from('orders')
-      .select('id, total_price, created_at, customer_id, post:daily_posts!post_id(title)')
-      .eq('chef_id', chefId)
-      .in('order_status', ['delivered', 'ready', 'out_for_delivery']);
-
-    if (orders) {
-      setTotalOrders(orders.length);
-      setTotalRevenue(orders.reduce((sum, o) => sum + (o.total_price || 0), 0));
-
-      // Repeat customers
-      const customerCounts: Record<string, number> = {};
-      orders.forEach(o => { customerCounts[o.customer_id] = (customerCounts[o.customer_id] || 0) + 1; });
-      setRepeatCustomers(Object.values(customerCounts).filter(c => c > 1).length);
-
-      // Best sellers
-      const dishCounts: Record<string, { title: string; count: number; revenue: number }> = {};
-      orders.forEach(o => {
-        const title = (o.post as any)?.title || 'Unknown';
-        if (!dishCounts[title]) dishCounts[title] = { title, count: 0, revenue: 0 };
-        dishCounts[title].count++;
-        dishCounts[title].revenue += o.total_price || 0;
-      });
-      setBestSellers(Object.values(dishCounts).sort((a, b) => b.count - a.count).slice(0, 5));
-
-      // Revenue by recent days (last 7)
-      const dayMap: Record<string, number> = {};
-      const now = new Date();
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(now); d.setDate(d.getDate() - i);
-        dayMap[d.toISOString().split('T')[0]] = 0;
-      }
-      orders.forEach(o => {
-        const day = o.created_at.split('T')[0];
-        if (dayMap[day] !== undefined) dayMap[day] += o.total_price || 0;
-      });
-      setRecentDays(Object.entries(dayMap).map(([date, rev]) => ({ date, revenue: rev })));
-    }
-
-    // Rating
-    const { data: chefProfile } = await supabase.from('chef_profiles')
-      .select('rating_average, total_reviews')
-      .eq('user_id', chefId)
-      .single();
-    if (chefProfile) {
-      setAvgRating(chefProfile.rating_average || 0);
-      setTotalReviews(chefProfile.total_reviews || 0);
+    const { data, error } = await analyticsApi.getChefAnalytics(chefId);
+    if (data) {
+      setTotalOrders(data.totalOrders);
+      setTotalRevenue(data.totalRevenue);
+      setAvgRating(data.avgRating);
+      setTotalReviews(data.totalReviews);
+      setRepeatCustomers(data.repeatCustomers);
+      setBestSellers(data.bestSellers);
+      setRecentDays(data.recentDays);
     }
   };
 

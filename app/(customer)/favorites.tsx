@@ -5,8 +5,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
 import { ScreenWrapper, PostImage, AvatarImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
-import { savedApi, postsApi, chefApi } from '@/lib/api';
-import { supabase } from '@/lib/supabase';
+import { savedApi } from '@/lib/api';
 
 export default function FavoritesScreen() {
   const router = useRouter();
@@ -19,29 +18,12 @@ export default function FavoritesScreen() {
 
   const load = useCallback(async () => {
     if (!profile?.id) return;
-    const { data: items } = await savedApi.getSavedItems(profile.id);
-
-    // Resolve dishes
-    const dishIds = items.filter(i => i.type === 'dish').map(i => i.reference_id);
-    const chefIds = items.filter(i => i.type === 'chef').map(i => i.reference_id);
-
-    if (dishIds.length > 0) {
-      const { data } = await supabase.from('daily_posts')
-        .select('id, title, price, photos, chef:users!chef_id(full_name, profile_photo_url)')
-        .in('id', dishIds);
-      setSavedDishes(data || []);
-    } else {
-      setSavedDishes([]);
-    }
-
-    if (chefIds.length > 0) {
-      const { data } = await supabase.from('users')
-        .select('id, full_name, profile_photo_url, chef_profiles(kitchen_name, rating_average, total_reviews, is_verified)')
-        .in('id', chefIds);
-      setSavedChefs(data || []);
-    } else {
-      setSavedChefs([]);
-    }
+    const [dishesRes, chefsRes] = await Promise.all([
+      savedApi.getSavedDishes(profile.id),
+      savedApi.getSavedChefs(profile.id),
+    ]);
+    setSavedDishes(dishesRes.data);
+    setSavedChefs(chefsRes.data);
   }, [profile?.id]);
 
   useEffect(() => { load(); }, [load]);

@@ -33,7 +33,7 @@ export default function PreOrderScreen() {
   }, []);
 
   const loadAvailability = async () => {
-    const month = today.toISOString().slice(0, 7);
+    const month = new Date().toISOString().slice(0, 7);
     const { data } = await specialtiesApi.getAvailability(params.chefId || '', month);
     const unavailable = (data || []).filter((d: any) => !d.is_available).map((d: any) => d.date);
     setUnavailableDates(unavailable);

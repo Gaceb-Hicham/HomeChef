@@ -13,8 +13,8 @@ type ReviewInsert = Database['public']['Tables']['reviews']['Insert'];
 // ========================
 
 export const postsApi = {
-  /** Fetch today's feed with chef info */
-  async getFeed(city?: string) {
+  /** Fetch today's feed with chef info (paginated) */
+  async getFeed(city?: string, limit = 15, offset = 0) {
     const today = new Date().toISOString().split('T')[0];
     let query = supabase
       .from('daily_posts')
@@ -27,7 +27,8 @@ export const postsApi = {
       `)
       .eq('is_active', true)
       .eq('date', today)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (city) {
       query = query.eq('chef.city', city);
@@ -39,7 +40,7 @@ export const postsApi = {
       ...post,
       chef_profile: post.chef?.chef_profiles || null,
     }));
-    return { data: normalized, error: error?.message || null };
+    return { data: normalized, error: error?.message || null, hasMore: (data || []).length >= limit };
   },
 
   /** Fetch a single post detail with reviews */
@@ -102,17 +103,17 @@ export const postsApi = {
   },
 
   /** Search posts by title */
-  async searchPosts(query: string) {
+  async searchPosts(query: string, limit = 20) {
     const { data, error } = await supabase
       .from('daily_posts')
       .select(`
         *,
-        chef:users!chef_id ( id, full_name, profile_photo_url )
+        chef:users!chef_id ( id, full_name, profile_photo_url, chef_profiles ( kitchen_name, is_verified, rating_average ) )
       `)
       .eq('is_active', true)
       .ilike('title', `%${query}%`)
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(limit);
 
     return { data: data || [], error: error?.message || null };
   },
@@ -482,6 +483,32 @@ export const savedApi = {
       .single();
 
     return !!data;
+  },
+
+  /** Get saved dishes with full dish data */
+  async getSavedDishes(userId: string) {
+    const { data: items } = await supabase
+      .from('saved_items').select('reference_id')
+      .eq('user_id', userId).eq('type', 'dish');
+    const ids = (items || []).map(i => i.reference_id);
+    if (ids.length === 0) return { data: [], error: null };
+    const { data, error } = await supabase.from('daily_posts')
+      .select('id, title, price, photos, chef:users!chef_id(full_name, profile_photo_url)')
+      .in('id', ids);
+    return { data: data || [], error: error?.message || null };
+  },
+
+  /** Get saved chefs with full profile data */
+  async getSavedChefs(userId: string) {
+    const { data: items } = await supabase
+      .from('saved_items').select('reference_id')
+      .eq('user_id', userId).eq('type', 'chef');
+    const ids = (items || []).map(i => i.reference_id);
+    if (ids.length === 0) return { data: [], error: null };
+    const { data, error } = await supabase.from('users')
+      .select('id, full_name, profile_photo_url, chef_profiles(kitchen_name, rating_average, total_reviews, is_verified)')
+      .in('id', ids);
+    return { data: data || [], error: error?.message || null };
   },
 };
 
@@ -1142,5 +1169,72 @@ export const addressesApi = {
       .update({ is_default: true })
       .eq('id', addressId);
     return { error: error?.message || null };
+  },
+};
+
+// ========================
+// ANALYTICS API
+// ========================
+
+export const analyticsApi = {
+  /** Get chef analytics: orders, revenue, ratings, best sellers, revenue chart */
+  async getChefAnalytics(chefId: string) {
+    const [ordersRes, profileRes] = await Promise.all([
+      supabase.from('orders')
+        .select('id, total_price, created_at, customer_id, post:daily_posts!post_id(title)')
+        .eq('chef_id', chefId)
+        .in('order_status', ['delivered', 'ready', 'out_for_delivery']),
+      supabase.from('chef_profiles')
+        .select('rating_average, total_reviews')
+        .eq('user_id', chefId)
+        .single(),
+    ]);
+
+    const orders = ordersRes.data || [];
+    const chefProfile = profileRes.data;
+
+    const totalOrders = orders.length;
+    const totalRevenue = orders.reduce((sum: number, o: any) => sum + (o.total_price || 0), 0);
+
+    // Repeat customers
+    const customerCounts: Record<string, number> = {};
+    orders.forEach((o: any) => { customerCounts[o.customer_id] = (customerCounts[o.customer_id] || 0) + 1; });
+    const repeatCustomers = Object.values(customerCounts).filter(c => c > 1).length;
+
+    // Best sellers
+    const dishCounts: Record<string, { title: string; count: number; revenue: number }> = {};
+    orders.forEach((o: any) => {
+      const title = (o.post as any)?.title || 'Unknown';
+      if (!dishCounts[title]) dishCounts[title] = { title, count: 0, revenue: 0 };
+      dishCounts[title].count++;
+      dishCounts[title].revenue += o.total_price || 0;
+    });
+    const bestSellers = Object.values(dishCounts).sort((a, b) => b.count - a.count).slice(0, 5);
+
+    // Revenue by recent 7 days
+    const dayMap: Record<string, number> = {};
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now); d.setDate(d.getDate() - i);
+      dayMap[d.toISOString().split('T')[0]] = 0;
+    }
+    orders.forEach((o: any) => {
+      const day = o.created_at?.split('T')[0];
+      if (day && dayMap[day] !== undefined) dayMap[day] += o.total_price || 0;
+    });
+    const recentDays = Object.entries(dayMap).map(([date, revenue]) => ({ date, revenue }));
+
+    return {
+      data: {
+        totalOrders,
+        totalRevenue,
+        avgRating: chefProfile?.rating_average || 0,
+        totalReviews: chefProfile?.total_reviews || 0,
+        repeatCustomers,
+        bestSellers,
+        recentDays,
+      },
+      error: ordersRes.error?.message || profileRes.error?.message || null,
+    };
   },
 };

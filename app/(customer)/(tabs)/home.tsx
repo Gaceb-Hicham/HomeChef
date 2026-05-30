@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, FlatList,
-  TouchableOpacity, RefreshControl, Dimensions,
+  TouchableOpacity, RefreshControl, Dimensions, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
@@ -24,7 +24,7 @@ export default function HomeScreen() {
   const { colors, shadows, spacing } = useTheme();
   const { t } = useLanguage();
   const profile = useAuthStore((s) => s.profile);
-  const { feed, isLoading, isRefreshing, fetchFeed, refreshFeed, handleRealtimeUpdate } = usePostsStore();
+  const { feed, isLoading, isRefreshing, isLoadingMore, hasMore, fetchFeed, refreshFeed, loadMoreFeed, handleRealtimeUpdate } = usePostsStore();
   const unreadCount = useNotificationsStore((s) => s.unreadCount);
   const { chefOrders, fetchChefOrders } = useOrdersStore();
   const [pastOrders, setPastOrders] = useState<any[]>([]);
@@ -62,25 +62,20 @@ export default function HomeScreen() {
     } catch (e) {}
   };
 
-  // Fetch unread notification count
+  // Fetch profile-dependent data in a single effect
   useEffect(() => {
-    if (profile?.id) {
-      useNotificationsStore.getState().fetchUnreadCount(profile.id);
-    }
-  }, [profile?.id]);
-
-  // Fetch past orders for "Order Again"
-  useEffect(() => {
-    if (profile?.id) {
-      const loadPastOrders = async () => {
+    if (!profile?.id) return;
+    // Batch: notifications + past orders
+    Promise.all([
+      useNotificationsStore.getState().fetchUnreadCount(profile.id),
+      (async () => {
         try {
           const { ordersApi } = require('@/lib');
           const { data } = await ordersApi.getCustomerOrders(profile.id);
           if (data) setPastOrders(data.filter((o: any) => o.order_status === 'delivered').slice(0, 6));
-        } catch (e) {}
-      };
-      loadPastOrders();
-    }
+        } catch {}
+      })(),
+    ]);
   }, [profile?.id]);
 
   const onRefresh = useCallback(() => {
@@ -127,7 +122,7 @@ export default function HomeScreen() {
     </TouchableOpacity>
   );
 
-  const renderPostCard = ({ item }: { item: any }) => {
+  const renderPostCard = useCallback(({ item }: { item: any }) => {
     const chefName = item.chef?.full_name || item.chef_name || 'Chef';
     const remaining = item.remaining_quantity;
     const deadline = typeof item.order_deadline === 'string' && item.order_deadline.includes('T')
@@ -197,7 +192,7 @@ export default function HomeScreen() {
         </View>
       </TouchableOpacity>
     );
-  };
+  }, [flashSales, colors, shadows, t]);
 
   return (
     <ScreenWrapper padded={false}>
@@ -437,7 +432,14 @@ export default function HomeScreen() {
         ) : filteredPosts.length > 0 ? (
           <FlatList data={filteredPosts} renderItem={renderPostCard} keyExtractor={(i: any) => i.id}
             scrollEnabled={false}
-            contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: 16, paddingBottom: 24 }} />
+            onEndReached={() => loadMoreFeed(profile?.city || undefined)}
+            onEndReachedThreshold={0.5}
+            contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: 16, paddingBottom: 24 }}
+            ListFooterComponent={isLoadingMore ? (
+              <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+                <ActivityIndicator color={colors.primary} />
+              </View>
+            ) : null} />
         ) : (
           <View style={{ alignItems: 'center', paddingVertical: 60, paddingHorizontal: spacing.xl }}>
             <Text style={{ fontSize: 48, marginBottom: 16 }}>🍽️</Text>
