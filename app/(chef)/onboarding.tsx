@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/Toast';
 import { Ionicons } from '@expo/vector-icons';
 import { infoAlert } from '@/lib/crossAlert';
 import { pickImage, uploadKitchenCover } from '@/lib/storage';
-import { Image } from 'react-native';
+import { Image } from 'expo-image';
 
 export default function ChefOnboardingScreen() {
   const router = useRouter();
@@ -144,7 +144,7 @@ export default function ChefOnboardingScreen() {
         <TouchableOpacity style={[styles.coverArea, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant, overflow: 'hidden' }]}
           onPress={handlePickCover}>
           {coverUri ? (
-            <Image source={{ uri: coverUri }} style={{ width: '100%', height: '100%', borderRadius: 14 }} resizeMode="cover" />
+            <Image source={{ uri: coverUri }} style={{ width: '100%', height: '100%', borderRadius: 14 }} contentFit="cover" cachePolicy="memory-disk" transition={200} />
           ) : (
             <>
               <Ionicons name="image-outline" size={28} color={colors.outline} />

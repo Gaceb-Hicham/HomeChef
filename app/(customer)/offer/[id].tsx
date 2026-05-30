@@ -57,7 +57,7 @@ export default function OfferDetailScreen() {
   const maxQty = post?.remaining_quantity || 1;
 
   // Flash sale pricing
-  const discountedPrice = flashSale ? Math.round(post?.price * (1 - flashSale.discount_percentage / 100)) : null;
+  const discountedPrice = flashSale ? Math.round((post?.price ?? 0) * (1 - flashSale.discount_percentage / 100)) : null;
   const effectivePrice = discountedPrice || post?.price || 0;
   const saleEndsIn = flashSale ? Math.max(0, Math.floor((new Date(flashSale.ends_at).getTime() - Date.now()) / 3600000)) : 0;
 

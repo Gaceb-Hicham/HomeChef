@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useOrdersStore } from '@/stores/ordersStore';
@@ -188,7 +189,9 @@ export default function TrackOrderScreen() {
               <Image
                 source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=HOMECHEF-ORDER-${id}` }}
                 style={{ width: 180, height: 180 }}
-                resizeMode="contain"
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                transition={200}
               />
             </View>
             <Text style={{ color: colors.outline, fontSize: 11, marginTop: 8, textAlign: 'center' }}>Order #{id?.substring(0, 8)}</Text>

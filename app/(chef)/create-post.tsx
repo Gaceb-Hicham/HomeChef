@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
@@ -230,7 +231,7 @@ export default function CreatePostScreen() {
           <View style={styles.photosRow}>
             {selectedPhotos.map((photo, idx) => (
               <View key={idx} style={styles.photoThumb}>
-                <Image source={{ uri: photo.uri }} style={styles.photoImg} />
+                <Image source={{ uri: photo.uri }} style={styles.photoImg} cachePolicy="memory-disk" transition={200} />
                 <TouchableOpacity onPress={() => removePhoto(idx)} style={styles.removePhoto}>
                   <Ionicons name="close-circle" size={20} color="#ef4444" />
                 </TouchableOpacity>

@@ -1,6 +1,5 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { InteractionManager } from 'react-native';
-import NetInfo from '@react-native-community/netinfo';
 
 /**
  * Debounce hook — prevents rapid-fire API calls (search, scroll)
@@ -35,21 +34,8 @@ export function useAfterInteraction(fn: () => void, deps: any[] = []) {
   }, deps);
 }
 
-/**
- * Network status hook
- */
-export function useNetworkStatus() {
-  const isConnected = useRef(true);
-
-  useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener((state) => {
-      isConnected.current = state.isConnected ?? true;
-    });
-    return () => unsubscribe();
-  }, []);
-
-  return { isConnected };
-}
+// Re-export from standalone hook (no @react-native-community/netinfo dependency)
+export { useNetworkStatus } from './useNetworkStatus';
 
 /**
  * Lazy image preloader — preloads images in batches during idle time

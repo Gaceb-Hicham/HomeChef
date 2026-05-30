@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Image, Text, StyleSheet, ActivityIndicator,
+  View, Text, StyleSheet, ActivityIndicator,
   ScrollView, TouchableOpacity, LayoutChangeEvent,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useTheme } from '@/hooks/useTheme';
 
 interface PostImageProps {
@@ -144,8 +145,10 @@ function SingleImage({ uri, borderRadius, colors, fit = 'cover' }: { uri: string
       <Image
         source={{ uri }}
         style={[styles.image, { borderRadius }]}
-        resizeMode={fit}
-        onLoadEnd={() => setLoaded(true)}
+        contentFit={fit}
+        cachePolicy="memory-disk"
+        transition={200}
+        onLoad={() => setLoaded(true)}
         onError={() => setErrored(true)}
       />
       {!loaded && (
@@ -201,7 +204,9 @@ export function AvatarImage({
       <Image
         source={{ uri: validUri }}
         style={{ width: size, height: size }}
-        resizeMode="cover"
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        transition={150}
         onError={() => setHasError(true)}
       />
     </View>

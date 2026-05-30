@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/stores/authStore';
@@ -227,9 +228,9 @@ export default function ChefProfileScreen() {
             <TouchableOpacity onPress={handlePickCover}
               style={{ height: 100, borderRadius: 14, borderWidth: 2, borderStyle: 'dashed', borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow, alignItems: 'center', justifyContent: 'center', marginBottom: 16, overflow: 'hidden' }}>
               {editCoverUri ? (
-                <Image source={{ uri: editCoverUri }} style={{ width: '100%', height: '100%', borderRadius: 12 }} resizeMode="cover" />
+                <Image source={{ uri: editCoverUri }} style={{ width: '100%', height: '100%', borderRadius: 12 }} contentFit="cover" cachePolicy="memory-disk" transition={200} />
               ) : chefProfile?.cover_photo_url ? (
-                <Image source={{ uri: chefProfile.cover_photo_url }} style={{ width: '100%', height: '100%', borderRadius: 12 }} resizeMode="cover" />
+                <Image source={{ uri: chefProfile.cover_photo_url }} style={{ width: '100%', height: '100%', borderRadius: 12 }} contentFit="cover" cachePolicy="memory-disk" transition={200} />
               ) : (
                 <>
                   <Ionicons name="image-outline" size={24} color={colors.outline} />
