@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { postsApi } from '@/lib/api';
+import { cache, CacheKeys } from '@/lib/cache';
 import type { Database } from '@/lib/supabase';
 
 type Post = Database['public']['Tables']['daily_posts']['Row'];
@@ -61,13 +62,24 @@ export const usePostsStore = create<PostsState>((set, get) => ({
 
   fetchFeed: async (city) => {
     set({ isLoading: true, error: null, feedOffset: 0 });
+    // Show cached data instantly while fetching fresh
+    const cached = await cache.get<PostWithChef[]>(CacheKeys.POSTS_FEED);
+    if (cached && cached.length > 0) {
+      set({ feed: cached, isLoading: false, hasMore: true, feedOffset: cached.length });
+    }
     const { data, error, hasMore } = await postsApi.getFeed(city, 15, 0);
+    if (data) {
+      await cache.set(CacheKeys.POSTS_FEED, data, 5 * 60 * 1000);
+    }
     set({ feed: data as PostWithChef[], isLoading: false, error, hasMore, feedOffset: (data || []).length });
   },
 
   refreshFeed: async (city) => {
     set({ isRefreshing: true, feedOffset: 0 });
     const { data, error, hasMore } = await postsApi.getFeed(city, 15, 0);
+    if (data) {
+      await cache.set(CacheKeys.POSTS_FEED, data, 5 * 60 * 1000);
+    }
     set({ feed: data as PostWithChef[], isRefreshing: false, error, hasMore, feedOffset: (data || []).length });
   },
 

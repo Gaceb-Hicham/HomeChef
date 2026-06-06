@@ -377,6 +377,44 @@ export const chefApi = {
     const { data, error } = await query;
     return { data: data || [], error: error?.message || null };
   },
+
+  /** Search chefs by name or kitchen name */
+  async searchChefs(query: string, limit = 20) {
+    const { data, error } = await supabase
+      .from('users')
+      .select(`
+        id, full_name, profile_photo_url, city, area,
+        chef_profiles ( kitchen_name, bio, rating_average, total_reviews, is_open, is_verified, specialty_tags )
+      `)
+      .eq('role', 'chef')
+      .or(`full_name.ilike.%${query}%,chef_profiles.kitchen_name.ilike.%${query}%`)
+      .limit(limit);
+
+    // Filter out users without chef_profiles
+    const chefs = (data || []).filter((u: any) => u.chef_profiles);
+    return { data: chefs, error: error?.message || null };
+  },
+
+  /** Browse all chefs (paginated directory) */
+  async browseChefs(city?: string, limit = 20, offset = 0) {
+    let query = supabase
+      .from('users')
+      .select(`
+        id, full_name, profile_photo_url, city, area,
+        chef_profiles ( kitchen_name, bio, rating_average, total_reviews, is_open, is_verified, specialty_tags, cover_photo_url )
+      `)
+      .eq('role', 'chef')
+      .not('chef_profiles', 'is', null)
+      .order('full_name', { ascending: true })
+      .range(offset, offset + limit - 1);
+
+    if (city) {
+      query = query.eq('city', city);
+    }
+
+    const { data, error } = await query;
+    return { data: data || [], error: error?.message || null, hasMore: (data || []).length >= limit };
+  },
 };
 
 // ========================

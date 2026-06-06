@@ -24,6 +24,7 @@ export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [nearbyChefs, setNearbyChefs] = useState<any[]>([]);
+  const [chefResults, setChefResults] = useState<any[]>([]);
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
 
   const toggleFilter = (f: string) => {
@@ -68,6 +69,8 @@ export default function SearchScreen() {
       // Debounce 300ms to avoid hammering the API
       debounceRef.current = setTimeout(() => {
         searchPosts(text);
+        // Also search chefs by name/kitchen
+        chefApi.searchChefs(text).then(({ data }) => setChefResults(data || []));
         // Add to recent searches
         setRecentSearches(prev => {
           const filtered = prev.filter(s => s !== text);
@@ -76,6 +79,7 @@ export default function SearchScreen() {
       }, 300);
     } else {
       clearSearch();
+      setChefResults([]);
     }
   }, []);
 
@@ -134,11 +138,45 @@ export default function SearchScreen() {
         {/* Search results */}
         <FlatList data={filteredResults} keyExtractor={(i: any) => i.id}
           contentContainerStyle={{ paddingHorizontal: 20, gap: 10, paddingBottom: 24 }}
+          ListHeaderComponent={
+            chefResults.length > 0 ? (
+              <View style={{ marginBottom: 12 }}>
+                <Text style={[styles.sectionTitle, { color: colors.onBackground, marginBottom: 10 }]}>👨‍🍳 Chefs</Text>
+                {chefResults.map((chef: any) => {
+                  const cp = Array.isArray(chef.chef_profiles) ? chef.chef_profiles[0] : chef.chef_profiles;
+                  return (
+                    <TouchableOpacity key={chef.id}
+                      onPress={() => router.push(`/(customer)/chef/${chef.id}`)}
+                      style={[styles.chefRow, { backgroundColor: colors.surfaceContainerLowest, ...shadows.sm }]}>
+                      <AvatarImage uri={chef.profile_photo_url} size={44} emoji="👨‍🍳" />
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Text style={[styles.chefName, { color: colors.onSurface }]}>{chef.full_name}</Text>
+                          {cp?.is_verified && <Ionicons name="checkmark-circle" size={14} color="#2563eb" />}
+                          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: cp?.is_open ? '#16a34a' : '#dc2626', marginLeft: 2 }} />
+                        </View>
+                        <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{cp?.kitchen_name || ''}{chef.area ? ` · ${chef.area}` : ''}</Text>
+                      </View>
+                      {cp?.rating_average > 0 && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                          <Ionicons name="star" size={13} color="#f59e0b" />
+                          <Text style={{ color: colors.onSurface, fontWeight: '600', fontSize: 13 }}>{Number(cp.rating_average).toFixed(1)}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+                {filteredResults.length > 0 && (
+                  <Text style={[styles.sectionTitle, { color: colors.onBackground, marginTop: 12 }]}>🍽️ Dishes</Text>
+                )}
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={{ alignItems: 'center', paddingTop: 40 }}>
               <Text style={{ fontSize: 40 }}>🔍</Text>
               <Text style={{ color: colors.onSurfaceVariant, marginTop: 8, fontSize: 15 }}>
-                {isLoading ? 'Searching...' : 'No results found'}
+                {isLoading ? 'Searching...' : chefResults.length > 0 ? 'No dishes found, but we found chefs above!' : 'No results found'}
               </Text>
             </View>
           }
@@ -225,6 +263,18 @@ export default function SearchScreen() {
                   ))}
                 </>
               )}
+              {/* Browse All Chefs Directory */}
+              <TouchableOpacity
+                onPress={() => router.push('/(customer)/chefs')}
+                style={[styles.browseAllBtn, { backgroundColor: colors.primaryFixed }]}>
+                <Ionicons name="people" size={20} color={colors.primary} />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={{ fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 15, fontWeight: '600', color: colors.primary }}>Browse All Chefs</Text>
+                  <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>Find chefs even if they haven't posted today</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+              </TouchableOpacity>
+
               <View style={{ height: 24 }} />
             </View>
           }
@@ -253,4 +303,5 @@ const styles = StyleSheet.create({
   resultTitle: { fontFamily: 'PlusJakartaSans-SemiBold', fontSize: 15, fontWeight: '600' },
   resultChef: { fontFamily: 'PlusJakartaSans-Regular', fontSize: 12, marginTop: 2 },
   resultPrice: { fontFamily: 'PlusJakartaSans-Bold', fontSize: 15, fontWeight: '700' },
+  browseAllBtn: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 14, marginTop: 20 },
 });
