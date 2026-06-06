@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useToast } from '@/components/ui/Toast';
+import { ORDER_STATUS } from '@/lib/constants';
 
 /**
  * Generates 30-minute time slots from now until the deadline.
@@ -272,7 +273,7 @@ export default function CheckoutScreen() {
             delivery_address: deliveryType === 'delivery' ? (address || `${profile.area || ''}, ${profile.city || ''}`) : null,
             payment_method: paymentMethod,
             payment_status: paymentMethod === 'cash' ? 'pending' : 'paid',
-            order_status: 'received',
+            order_status: ORDER_STATUS.RECEIVED,
             scheduled_time: scheduledTimestamp,
           };
 

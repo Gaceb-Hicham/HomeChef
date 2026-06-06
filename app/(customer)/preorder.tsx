@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { specialtiesApi } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { infoAlert } from '@/lib/crossAlert';
+import { ORDER_STATUS } from '@/lib/constants';
 import { useToast } from '@/components/ui/Toast';
 
 export default function PreOrderScreen() {
@@ -61,7 +62,7 @@ export default function PreOrderScreen() {
       delivery_address: `${profile.area || ''}, ${profile.city || ''}`,
       payment_method: 'cash',
       payment_status: 'pending',
-      order_status: 'received',
+      order_status: ORDER_STATUS.RECEIVED,
       scheduled_time: scheduledTime,
     });
 

@@ -8,6 +8,7 @@ import { ScreenWrapper, PostImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '@/hooks/useLanguage';
 import { crossAlert } from '@/lib/crossAlert';
+import { ORDER_STATUS, ACTIVE_ORDER_STATUSES } from '@/lib/constants';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; icon: string }> = {
   received: { bg: '#e0f2fe', text: '#0369a1', icon: 'receipt' },
@@ -61,7 +62,7 @@ export default function OrdersScreen() {
     return (
       <TouchableOpacity
         onPress={() => {
-          if (['received', 'preparing', 'ready', 'out_for_delivery'].includes(item.order_status)) {
+          if (ACTIVE_ORDER_STATUSES.includes(item.order_status)) {
             router.push(`/(customer)/track/${item.id}`);
           }
         }}
@@ -87,13 +88,13 @@ export default function OrdersScreen() {
             <Ionicons name={item.delivery_type === 'delivery' ? 'bicycle' : 'storefront'} size={12} color={colors.onSurfaceVariant} />
             <Text style={{ color: colors.onSurfaceVariant, fontSize: 11, textTransform: 'capitalize' }}>{item.delivery_type}</Text>
           </View>
-          {tab === 'active' && item.order_status === 'received' && (
+          {tab === 'active' && item.order_status === ORDER_STATUS.RECEIVED && (
             <TouchableOpacity
               onPress={() => {
                 crossAlert('Cancel Order', 'Are you sure you want to cancel this order?', [
                   { text: 'No', style: 'cancel' },
                   { text: 'Yes, Cancel', style: 'destructive', onPress: async () => {
-                    await updateOrderStatus(item.id, 'cancelled');
+                    await updateOrderStatus(item.id, ORDER_STATUS.CANCELLED);
                     if (profile?.id) fetchCustomerOrders(profile.id);
                   }},
                 ]);
@@ -103,10 +104,10 @@ export default function OrdersScreen() {
               <Text style={{ color: '#dc2626', fontSize: 11, fontWeight: '600', marginLeft: 3 }}>Cancel</Text>
             </TouchableOpacity>
           )}
-          {tab === 'active' && item.order_status !== 'received' && (
+          {tab === 'active' && item.order_status !== ORDER_STATUS.RECEIVED && (
             <Ionicons name="chevron-forward" size={18} color={colors.outline} style={{ marginLeft: 'auto' }} />
           )}
-          {tab === 'past' && !item.review && item.order_status === 'delivered' && (
+          {tab === 'past' && !item.review && item.order_status === ORDER_STATUS.DELIVERED && (
             <TouchableOpacity
               onPress={() => router.push(`/(customer)/review/${item.id}`)}
               style={[styles.reviewBtn, { borderColor: colors.primary }]}>

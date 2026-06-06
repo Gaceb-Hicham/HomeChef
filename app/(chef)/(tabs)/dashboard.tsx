@@ -10,6 +10,7 @@ import { Button, ScreenWrapper, AvatarImage, PostImage } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { crossAlert, infoAlert } from '@/lib/crossAlert';
 import { useLanguage } from '@/hooks/useLanguage';
+import { ORDER_STATUS } from '@/lib/constants';
 
 
 
@@ -57,7 +58,7 @@ export default function DashboardScreen() {
   });
 
   const pendingOrders = chefOrders.filter((o) =>
-    ['received', 'preparing', 'ready'].includes(o.order_status)
+    ([ORDER_STATUS.RECEIVED, ORDER_STATUS.PREPARING, ORDER_STATUS.READY] as string[]).includes(o.order_status)
   );
 
   const stats = [
@@ -165,10 +166,10 @@ export default function DashboardScreen() {
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <View style={[styles.miniStatus, {
-                backgroundColor: order.order_status === 'received' ? '#e0f2fe' : order.order_status === 'preparing' ? '#fef3c7' : '#dcfce7',
+                backgroundColor: order.order_status === ORDER_STATUS.RECEIVED ? '#e0f2fe' : order.order_status === ORDER_STATUS.PREPARING ? '#fef3c7' : '#dcfce7',
               }]}>
                 <Text style={[styles.miniStatusText, {
-                  color: order.order_status === 'received' ? '#0369a1' : order.order_status === 'preparing' ? '#b45309' : '#15803d',
+                  color: order.order_status === ORDER_STATUS.RECEIVED ? '#0369a1' : order.order_status === ORDER_STATUS.PREPARING ? '#b45309' : '#15803d',
                 }]}>{order.order_status}</Text>
               </View>
               <Text style={[styles.orderTime, { color: colors.outline }]}>{order.time}</Text>

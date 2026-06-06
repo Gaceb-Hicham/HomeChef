@@ -14,6 +14,7 @@ import { ScreenWrapper, PostImage, AvatarImage, FeedSkeleton } from '@/component
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '@/hooks/useLanguage';
 import { flashSalesApi, teasersApi, groupOrdersApi } from '@/lib/api';
+import { ORDER_STATUS } from '@/lib/constants';
 
 const { width } = Dimensions.get('window');
 
@@ -72,7 +73,7 @@ export default function HomeScreen() {
         try {
           const { ordersApi } = require('@/lib');
           const { data } = await ordersApi.getCustomerOrders(profile.id);
-          if (data) setPastOrders(data.filter((o: any) => o.order_status === 'delivered').slice(0, 6));
+          if (data) setPastOrders(data.filter((o: any) => o.order_status === ORDER_STATUS.DELIVERED).slice(0, 6));
         } catch {}
       })(),
     ]);
